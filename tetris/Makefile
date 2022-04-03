@@ -36,7 +36,7 @@ ifneq ($(CFG),release)
 endif
 endif
 
-SDL=yes
+SDL=no
 ifeq ($(SDL),yes)
 CFLAGS += `sdl-config --cflags` -DWITH_SDL=1
 LFLAGS += `sdl-config --libs` -lSDL_mixer
