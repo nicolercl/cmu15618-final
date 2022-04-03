@@ -180,7 +180,7 @@ int main(int argc, char **argv)
   tetris_game *tg;
   tetris_move move = TM_NONE;
   bool running = true;
-  WINDOW *board, *next, *hold, *score;
+  WINDOW *board, *next[NEXT_N], *hold, *score;
 #if WITH_SDL
   Mix_Music *music;
 #endif
@@ -233,7 +233,8 @@ int main(int argc, char **argv)
 
   // Create windows for each section of the interface.
   board = newwin(tg->rows + 2, 2 * tg->cols + 2, 0, 0);
-  next  = newwin(6, 10, 0, 2 * (tg->cols + 1) + 1);
+  for (int i = 0; i < NEXT_N; i++)
+    next[i]  = newwin(6, 10, i * 6, 2 * (tg->cols + 1) + 1 + 16);
   hold  = newwin(6, 10, 7, 2 * (tg->cols + 1) + 1);
   score = newwin(6, 10, 14, 2 * (tg->cols + 1 ) + 1);
 
@@ -241,7 +242,8 @@ int main(int argc, char **argv)
   while (running) {
     running = tg_tick(tg, move);
     display_board(board, tg);
-    display_piece(next, tg->next);
+    for (int i = 0; i < NEXT_N; i++)
+      display_piece(next[i], tg->next[i]);
     display_piece(hold, tg->stored);
     display_score(score, tg);
     doupdate();

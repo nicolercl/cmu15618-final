@@ -161,11 +161,15 @@ static int random_tetromino(void) {
 static void tg_new_falling(tetris_game *obj)
 {
   // Put in a new falling tetromino.
-  obj->falling = obj->next;
-  obj->next.typ = random_tetromino();
-  obj->next.ori = 0;
-  obj->next.loc.row = 0;
-  obj->next.loc.col = obj->cols/2 - 2;
+  obj->falling = obj->next[0];
+
+  for (int i = 1; i < NEXT_N; i++)
+    obj->next[i-1] = obj->next[i];
+  
+  obj->next[NEXT_N - 1].typ = random_tetromino();
+  obj->next[NEXT_N - 1].ori = 0;
+  obj->next[NEXT_N - 1].loc.row = 0;
+  obj->next[NEXT_N - 1].loc.col = obj->cols/2 - 2;
 }
 
 /*******************************************************************************
@@ -430,12 +434,14 @@ void tg_init(tetris_game *obj, int rows, int cols)
   obj->ticks_till_gravity = GRAVITY_LEVEL[obj->level];
   obj->lines_remaining = LINES_PER_LEVEL;
   srand(time(NULL));
-  tg_new_falling(obj);
-  tg_new_falling(obj);
+  for (int i = 0; i < NEXT_N + 1; i++)
+    tg_new_falling(obj);
+  // tg_new_falling(obj);
   obj->stored.typ = -1;
   obj->stored.ori = 0;
   obj->stored.loc.row = 0;
-  obj->next.loc.col = obj->cols/2 - 2;
+  for (int i = 0; i < NEXT_N; i++)
+    obj->next[i].loc.col = obj->cols/2 - 2;
   printf("%d", obj->falling.loc.col);
 }
 

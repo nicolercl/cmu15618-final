@@ -56,6 +56,11 @@
 #define LINES_PER_LEVEL 10
 
 /*
+  Number of next pieces waiting
+*/
+#define NEXT_N 4
+
+/*
   A "cell" is a 1x1 block within a tetris board.
  */
 typedef enum {
@@ -115,7 +120,7 @@ typedef struct {
     will be falling after this one.  Stored is the block that you can swap out.
    */
   tetris_block falling;
-  tetris_block next;
+  tetris_block next[NEXT_N];
   tetris_block stored;
   /*
     Number of game ticks until the block will move down.
