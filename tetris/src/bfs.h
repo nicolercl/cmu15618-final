@@ -12,9 +12,9 @@ typedef struct {
     int level;
     // orientation and offset of first move
     int ori;
-    int offset;
+    int col;
 } state;
 
-void solve(tetris_game, int *ori, int *offset);
+tetris_block solve(tetris_game* game);
 
 #endif // BFS_H

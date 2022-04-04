@@ -108,7 +108,7 @@ bool tg_check(tetris_game *obj, int row, int col)
 /*
   Place a block onto the board.
  */
-static void tg_put(tetris_game *obj, tetris_block block)
+void tg_put(tetris_game *obj, tetris_block block)
 {
   int i;
   for (i = 0; i < TETRIS; i++) {
@@ -121,7 +121,7 @@ static void tg_put(tetris_game *obj, tetris_block block)
 /*
   Clear a block out of the board.
  */
-static void tg_remove(tetris_game *obj, tetris_block block)
+void tg_remove(tetris_game *obj, tetris_block block)
 {
   int i;
   for (i = 0; i < TETRIS; i++) {
@@ -215,7 +215,7 @@ static void tg_move(tetris_game *obj, int direction)
 /*
   Send the falling tetris block to the bottom.
  */
-static void tg_down(tetris_game *obj)
+void tg_down(tetris_game *obj)
 {
   tg_remove(obj, obj->falling);
   while (tg_fits(obj, obj->falling)) {
@@ -342,7 +342,7 @@ static void tg_shift_lines(tetris_game *obj, int r)
   Find rows that are filled, remove them, shift, and return the number of
   cleared rows.
  */
-static int tg_check_lines(tetris_game *obj)
+int tg_check_lines(tetris_game *obj)
 {
   int i, nlines = 0;
   tg_remove(obj, obj->falling); // don't want to mess up falling block
