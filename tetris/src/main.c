@@ -26,18 +26,42 @@
 #endif
 
 #include "tetris.h"
+#include "dfs_solver.h"
 #include "util.h"
 
 /*
   2 columns per cell makes the game much nicer.
  */
 #define COLS_PER_CELL 2
+#define MAXIMUM_MOVES 128
+#define USE_SOLVER 1
+#define GUI 1
 /*
   Macro to print a cell of a specific type to a window.
  */
 #define ADD_BLOCK(w,x) waddch((w),' '|A_REVERSE|COLOR_PAIR(x));     \
                        waddch((w),' '|A_REVERSE|COLOR_PAIR(x))
 #define ADD_EMPTY(w) waddch((w), ' '); waddch((w), ' ')
+
+void get_moves(tetris_block falling, tetris_block result, int* moves){
+    int move, step, ptr = 0;
+    
+    // move for orientations
+    move = (falling.ori < result.ori) ? TM_CLOCK: TM_COUNTER;
+    step = (falling.ori < result.ori) ? 1 : -1;
+    for(int i = falling.ori; i != result.ori; i += step){
+        moves[ptr++] = move;
+    }
+
+    // move for cols 
+    move = (falling.loc.col < result.loc.col) ? TM_RIGHT : TM_LEFT;
+    step = (falling.loc.col < result.loc.col) ? 1 : -1;
+    for(int i = falling.loc.col; i != result.loc.col; i += step){
+        moves[ptr++] = move;
+    }
+    moves[ptr++] = TM_DROP;
+    moves[ptr] = TM_NONE;
+}
 
 /*
   Print the tetris board onto the ncurses window.
@@ -223,79 +247,106 @@ int main(int argc, char **argv)
 #endif
 
   // NCURSES initialization:
-  initscr();             // initialize curses
-  cbreak();              // pass key presses to program, but not signals
-  noecho();              // don't echo key presses to screen
-  keypad(stdscr, TRUE);  // allow arrow keys
-  timeout(0);            // no blocking on getch()
-  curs_set(0);           // set the cursor to invisible
-  init_colors();         // setup tetris colors
+  if(GUI){
+      initscr();             // initialize curses
+      cbreak();              // pass key presses to program, but not signals
+      noecho();              // don't echo key presses to screen
+      keypad(stdscr, TRUE);  // allow arrow keys
+      timeout(0);            // no blocking on getch()
+      curs_set(0);           // set the cursor to invisible
+      init_colors();         // setup tetris colors
+      // Create windows for each section of the interface.
+      board = newwin(tg->rows + 2, 2 * tg->cols + 2, 0, 0);
+      for (int i = 0; i < NEXT_N; i++)
+        next[i]  = newwin(6, 10, i * 6, 2 * (tg->cols + 1) + 1 + 16);
+      hold  = newwin(6, 10, 7, 2 * (tg->cols + 1) + 1);
+      score = newwin(6, 10, 14, 2 * (tg->cols + 1 ) + 1);
+  }
 
-  // Create windows for each section of the interface.
-  board = newwin(tg->rows + 2, 2 * tg->cols + 2, 0, 0);
-  for (int i = 0; i < NEXT_N; i++)
-    next[i]  = newwin(6, 10, i * 6, 2 * (tg->cols + 1) + 1 + 16);
-  hold  = newwin(6, 10, 7, 2 * (tg->cols + 1) + 1);
-  score = newwin(6, 10, 14, 2 * (tg->cols + 1 ) + 1);
+  // solver init
+  int moves[MAXIMUM_MOVES];
+  int action_ptr = 0;
+  moves[0] = TM_NONE;
 
   // Game loop
   while (running) {
     running = tg_tick(tg, move);
-    display_board(board, tg);
-    for (int i = 0; i < NEXT_N; i++)
-      display_piece(next[i], tg->next[i]);
-    display_piece(hold, tg->stored);
-    display_score(score, tg);
-    doupdate();
-    sleep_milli(10);
 
-    switch (getch()) {
-    case KEY_LEFT:
-      move = TM_LEFT;
-      break;
-    case KEY_RIGHT:
-      move = TM_RIGHT;
-      break;
-    case KEY_UP:
-      move = TM_CLOCK;
-      break;
-    case KEY_DOWN:
-      move = TM_DROP;
-      break;
-    case 'q':
-      running = false;
-      move = TM_NONE;
-      break;
-    case 'p':
-      wclear(board);
-      box(board, 0, 0);
-      wmove(board, tg->rows/2, (tg->cols*COLS_PER_CELL-6)/2);
-      wprintw(board, "PAUSED");
-      wrefresh(board);
-      timeout(-1);
-      getch();
-      timeout(0);
-      move = TM_NONE;
-      break;
-    case 'b':
-      boss_mode();
-      move = TM_NONE;
-      break;
-    case 's':
-      save(tg, board);
-      move = TM_NONE;
-      break;
-    case ' ':
-      move = TM_HOLD;
-      break;
-    default:
-      move = TM_NONE;
+    if(GUI){
+        display_board(board, tg);
+        for (int i = 0; i < NEXT_N; i++)
+          display_piece(next[i], tg->next[i]);
+        display_piece(hold, tg->stored);
+        display_score(score, tg);
+        doupdate();
     }
+
+    sleep_milli(100);
+
+
+    if(USE_SOLVER){
+        if(moves[action_ptr] == TM_NONE){
+            printf("Hi\n");
+            tetris_block result = dfs_solver(tg);
+            get_moves(tg->falling, result, moves);
+            action_ptr = 0;
+        }
+        move = moves[action_ptr++];
+
+    } else {
+        switch (getch()) {
+        case KEY_LEFT:
+          move = TM_LEFT;
+          break;
+        case KEY_RIGHT:
+          move = TM_RIGHT;
+          break;
+        case KEY_UP:
+          move = TM_CLOCK;
+          break;
+        case KEY_DOWN:
+          move = TM_DROP;
+          break;
+        case 'q':
+          running = false;
+          move = TM_NONE;
+          break;
+        case 'p':
+          if(GUI){
+              wclear(board);
+              box(board, 0, 0);
+              wmove(board, tg->rows/2, (tg->cols*COLS_PER_CELL-6)/2);
+              wprintw(board, "PAUSED");
+              wrefresh(board);
+              timeout(-1);
+              getch();
+              timeout(0);
+              move = TM_NONE;
+          }
+          break;
+        case 'b':
+          boss_mode();
+          move = TM_NONE;
+          break;
+        case 's':
+          save(tg, board);
+          move = TM_NONE;
+          break;
+        case ' ':
+          move = TM_HOLD;
+          break;
+        default:
+          move = TM_NONE;
+        }
+    }
+
   }
 
   // Deinitialize NCurses
-  wclear(stdscr);
-  endwin();
+  if(GUI){
+      wclear(stdscr);
+      endwin();
+  }
 
 #if WITH_SDL
 

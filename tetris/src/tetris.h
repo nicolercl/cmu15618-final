@@ -161,4 +161,8 @@ bool tg_check(tetris_game *obj, int row, int col);
 bool tg_tick(tetris_game *obj, tetris_move move);
 void tg_print(tetris_game *obj, FILE *f);
 
+// Public methods related to memory
+void tg_down(tetris_game *obj);
+int tg_check_lines(tetris_game *obj);
+
 #endif // TETRIS_H
