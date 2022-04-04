@@ -158,7 +158,7 @@ static int random_tetromino(void) {
   Create a new falling block and populate the next falling block with a random
   one.
  */
-static void tg_new_falling(tetris_game *obj)
+void tg_new_falling(tetris_game *obj)
 {
   // Put in a new falling tetromino.
   obj->falling = obj->next[0];
@@ -284,7 +284,7 @@ static void tg_hold(tetris_game *obj)
 /*
   Perform the action specified by the move.
  */
-static void tg_handle_move(tetris_game *obj, tetris_move move)
+void tg_handle_move(tetris_game *obj, tetris_move move)
 {
   switch (move) {
   case TM_LEFT:
@@ -378,7 +378,7 @@ static void tg_adjust_score(tetris_game *obj, int lines_cleared)
 /*
   Return true if the game is over.
  */
-static bool tg_game_over(tetris_game *obj)
+bool tg_game_over(tetris_game *obj)
 {
   int i, j;
   bool over = false;

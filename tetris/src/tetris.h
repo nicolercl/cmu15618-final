@@ -164,5 +164,8 @@ void tg_print(tetris_game *obj, FILE *f);
 // Public methods related to memory
 void tg_down(tetris_game *obj);
 int tg_check_lines(tetris_game *obj);
+void tg_new_falling(tetris_game *obj);
+bool tg_game_over(tetris_game *obj);
+void tg_handle_move(tetris_game *obj, tetris_move move);
 
 #endif // TETRIS_H
