@@ -15,7 +15,7 @@
 
 # Compiler Variable Declarations
 CC=gcc
-FLAGS=-Wall -pedantic
+FLAGS=-O3 -Wall -pedantic -fopenmp -Wno-unknown-pragmas
 INC=-Isrc/
 CFLAGS=$(FLAGS) -c -g --std=c99 $(INC)
 LFLAGS=$(FLAGS) -lncurses
