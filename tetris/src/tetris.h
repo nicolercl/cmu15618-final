@@ -28,7 +28,7 @@
   Strings for how you would print a tetris board.
  */
 #define TC_EMPTY_STR " "
-#define TC_BLOCK_STR "\u2588"
+#define TC_BLOCK_STR "b" //"\u2588"
 
 /*
   Questions about a tetris cell.
@@ -163,6 +163,9 @@ void tg_print(tetris_game *obj, FILE *f);
 
 // Public methods related to memory
 void tg_down(tetris_game *obj);
+void tg_move(tetris_game *obj, int direction);
+void tg_rotate(tetris_game *obj, int direction);
 int tg_check_lines(tetris_game *obj);
+void tg_adjust_score(tetris_game *obj, int lines_cleared);
 
 #endif // TETRIS_H

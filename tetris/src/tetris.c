@@ -202,7 +202,7 @@ static void tg_do_gravity_tick(tetris_game *obj)
 /*
   Move the falling tetris block left (-1) or right (+1).
  */
-static void tg_move(tetris_game *obj, int direction)
+void tg_move(tetris_game *obj, int direction)
 {
   tg_remove(obj, obj->falling);
   obj->falling.loc.col += direction;
@@ -215,7 +215,7 @@ static void tg_move(tetris_game *obj, int direction)
 /*
   Send the falling tetris block to the bottom.
  */
-static void tg_down(tetris_game *obj)
+void tg_down(tetris_game *obj)
 {
   tg_remove(obj, obj->falling);
   while (tg_fits(obj, obj->falling)) {
@@ -229,7 +229,7 @@ static void tg_down(tetris_game *obj)
 /*
   Rotate the falling block in either direction (+/-1).
  */
-static void tg_rotate(tetris_game *obj, int direction)
+void tg_rotate(tetris_game *obj, int direction)
 {
   tg_remove(obj, obj->falling);
 
@@ -342,7 +342,7 @@ static void tg_shift_lines(tetris_game *obj, int r)
   Find rows that are filled, remove them, shift, and return the number of
   cleared rows.
  */
-static int tg_check_lines(tetris_game *obj)
+int tg_check_lines(tetris_game *obj)
 {
   int i, nlines = 0;
   tg_remove(obj, obj->falling); // don't want to mess up falling block
@@ -362,9 +362,9 @@ static int tg_check_lines(tetris_game *obj)
 /*
   Adjust the score for the game, given how many lines were just cleared.
  */
-static void tg_adjust_score(tetris_game *obj, int lines_cleared)
+void tg_adjust_score(tetris_game *obj, int lines_cleared)
 {
-  static int line_multiplier[] = {0, 40, 100, 300, 1200};
+  int line_multiplier[] = {0, 40, 100, 300, 1200};
   obj->points += line_multiplier[lines_cleared] * (obj->level + 1);
   if (lines_cleared >= obj->lines_remaining) {
     obj->level = MIN(MAX_LEVEL, obj->level + 1);
@@ -442,7 +442,6 @@ void tg_init(tetris_game *obj, int rows, int cols)
   obj->stored.loc.row = 0;
   for (int i = 0; i < NEXT_N; i++)
     obj->next[i].loc.col = obj->cols/2 - 2;
-  printf("%d", obj->falling.loc.col);
 }
 
 tetris_game *tg_create(int rows, int cols)
