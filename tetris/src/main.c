@@ -17,8 +17,10 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <time.h>
+#include <sys/time.h>
 #include <ncurses.h>
 #include <string.h>
+#include <omp.h>
 
 #if WITH_SDL
 # include <SDL/SDL.h>
@@ -26,7 +28,7 @@
 #endif
 
 #include "tetris.h"
-// #include "dfs_solver.h"
+#include "dfs_solver.h"
 #include "bfs.h"
 #include "util.h"
 
@@ -37,9 +39,13 @@
 #define MAXIMUM_MOVES 128
 #define USE_SOLVER 1
 #define GUI 0
-#define DFS 0
-#define BFS 1
-#define TIME_LIMIT 60 // 60 seconds
+#define DFS 1
+#define BFS 0
+#define TIME_LIMIT 10 // 60 seconds
+#define DELAY 1
+#define NUM_OF_THREADS 8
+#define ROW 22
+#define COL 10
 
 /*
   Macro to print a cell of a specific type to a window.
@@ -229,7 +235,7 @@ int run_game(int height, int hole, int bumpiness)
   // }
 
 // always create new game
-tg = tg_create(22, 10);
+tg = tg_create(ROW, COL);
 
 #if WITH_SDL
 
@@ -278,7 +284,6 @@ tg = tg_create(22, 10);
 
   time_t start;
   start = time(NULL);
-
   // Game loop
   while (running && time(NULL) - start < TIME_LIMIT) {
     running = tg_tick(tg, move);
@@ -292,14 +297,14 @@ tg = tg_create(22, 10);
         doupdate();
     }
 
-    sleep_milli(100);
+    sleep_milli(DELAY);
 
 
     if(USE_SOLVER){
         if(moves[action_ptr] == TM_NONE){
             tetris_block result;
             if (DFS) {
-              result = dfs_solver(tg, height, hole, bumpiness);
+                result = dfs_solver(tg);
             } else if (BFS) {
               result = solve(tg, height, hole, bumpiness);
             }
@@ -384,6 +389,8 @@ tg = tg_create(22, 10);
 }
 
 int main(int argc, char **argv) {
+
+  omp_set_num_threads(NUM_OF_THREADS);
   for (int i = 1; i < 10; i++) {
     for (int j = 1; j < 10; j++) {
       for (int k = 1; k < 10; k++) {
