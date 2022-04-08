@@ -94,7 +94,7 @@ state* update_state(tetris_game* game, state *oldstate) {
  * @param[out] orientation
  * @param[out] offset
  */
-tetris_block solve(tetris_game* tg) {
+tetris_block solve(tetris_game* tg, int height, int hole, int bumpiness) {
     tetris_game* game = deep_copy(tg);
 
     int board_size = game->rows * game->cols;

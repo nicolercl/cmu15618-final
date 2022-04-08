@@ -15,6 +15,6 @@ typedef struct {
     int col;
 } state;
 
-tetris_block solve(tetris_game* game);
+tetris_block solve(tetris_game* game, int height, int hole, int bumpiness);
 
 #endif // BFS_H

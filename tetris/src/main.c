@@ -26,7 +26,7 @@
 #endif
 
 #include "tetris.h"
-#include "dfs_solver.h"
+// #include "dfs_solver.h"
 #include "bfs.h"
 #include "util.h"
 
@@ -36,9 +36,10 @@
 #define COLS_PER_CELL 2
 #define MAXIMUM_MOVES 128
 #define USE_SOLVER 1
-#define GUI 1
+#define GUI 0
 #define DFS 0
 #define BFS 1
+#define TIME_LIMIT 60 // 60 seconds
 
 /*
   Macro to print a cell of a specific type to a window.
@@ -203,7 +204,7 @@ void init_colors(void)
 /*
   Main tetris game!
  */
-int main(int argc, char **argv)
+int run_game(int height, int hole, int bumpiness)
 {
   tetris_game *tg;
   tetris_move move = TM_NONE;
@@ -214,18 +215,21 @@ int main(int argc, char **argv)
 #endif
 
   // Load file if given a filename.
-  if (argc >= 2) {
-    FILE *f = fopen(argv[1], "r");
-    if (f == NULL) {
-      perror("tetris");
-      exit(EXIT_FAILURE);
-    }
-    tg = tg_load(f);
-    fclose(f);
-  } else {
-    // Otherwise create new game.
-    tg = tg_create(22, 10);
-  }
+  // if (argc >= 2) {
+  //   FILE *f = fopen(argv[1], "r");
+  //   if (f == NULL) {
+  //     perror("tetris");
+  //     exit(EXIT_FAILURE);
+  //   }
+  //   tg = tg_load(f);
+  //   fclose(f);
+  // } else {
+  //   // Otherwise create new game.
+  //   tg = tg_create(22, 10);
+  // }
+
+// always create new game
+tg = tg_create(22, 10);
 
 #if WITH_SDL
 
@@ -272,8 +276,11 @@ int main(int argc, char **argv)
   int action_ptr = 0;
   moves[0] = TM_NONE;
 
+  time_t start;
+  start = time(NULL);
+
   // Game loop
-  while (running) {
+  while (running && time(NULL) - start < TIME_LIMIT) {
     running = tg_tick(tg, move);
 
     if(GUI){
@@ -290,12 +297,11 @@ int main(int argc, char **argv)
 
     if(USE_SOLVER){
         if(moves[action_ptr] == TM_NONE){
-            printf("Hi\n");
             tetris_block result;
             if (DFS) {
-              result = dfs_solver(tg);
+              result = dfs_solver(tg, height, hole, bumpiness);
             } else if (BFS) {
-              result = solve(tg);
+              result = solve(tg, height, hole, bumpiness);
             }
             get_moves(tg->falling, result, moves);
             action_ptr = 0;
@@ -369,9 +375,20 @@ int main(int argc, char **argv)
 
   // Output ending message.
   printf("Game over!\n");
+  printf("Height: %d, Hole: %d, Bumpiness: %d\n", height, hole, bumpiness);
   printf("You finished with %d points on level %d.\n", tg->points, tg->level);
 
   // Deinitialize Tetris
   tg_delete(tg);
   return 0;
+}
+
+int main(int argc, char **argv) {
+  for (int i = 1; i < 10; i++) {
+    for (int j = 1; j < 10; j++) {
+      for (int k = 1; k < 10; k++) {
+          run_game(i, j, k);
+      }
+    }
+  }
 }
