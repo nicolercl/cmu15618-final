@@ -167,5 +167,10 @@ void tg_move(tetris_game *obj, int direction);
 void tg_rotate(tetris_game *obj, int direction);
 int tg_check_lines(tetris_game *obj);
 void tg_adjust_score(tetris_game *obj, int lines_cleared);
+void tg_new_falling(tetris_game *obj);
+bool tg_game_over(tetris_game *obj);
+void tg_handle_move(tetris_game *obj, tetris_move move);
+void tg_remove(tetris_game *obj, tetris_block block);
+void tg_put(tetris_game *obj, tetris_block block);
 
 #endif // TETRIS_H

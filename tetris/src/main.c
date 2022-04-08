@@ -27,6 +27,7 @@
 
 #include "tetris.h"
 #include "dfs_solver.h"
+#include "bfs.h"
 #include "util.h"
 
 /*
@@ -36,6 +37,9 @@
 #define MAXIMUM_MOVES 128
 #define USE_SOLVER 1
 #define GUI 1
+#define DFS 0
+#define BFS 1
+
 /*
   Macro to print a cell of a specific type to a window.
  */
@@ -287,7 +291,12 @@ int main(int argc, char **argv)
     if(USE_SOLVER){
         if(moves[action_ptr] == TM_NONE){
             printf("Hi\n");
-            tetris_block result = dfs_solver(tg);
+            tetris_block result;
+            if (DFS) {
+              result = dfs_solver(tg);
+            } else if (BFS) {
+              result = solve(tg);
+            }
             get_moves(tg->falling, result, moves);
             action_ptr = 0;
         }
