@@ -2,7 +2,7 @@
 #include "sys/time.h"
 #include "omp.h"
 
-#define DEPTH 4
+#define DEPTH 3
 #define DEBUG 0
 bool tg_line_empty(tetris_game *obj, int i){
     for(int j = 0; j < obj->cols; j++){
@@ -90,7 +90,7 @@ int tg_get_score(tetris_game *obj){
     return score;
 }
 
-void tg_copy(tetris_game *dest, tetris_game *src){
+void tg_copy(tetris_game *dest, const tetris_game *src){
     // copy board 
     memcpy(dest->board, src->board, sizeof(char) * src->rows * src->cols);
     // copy next blocks
@@ -108,7 +108,7 @@ void tg_copy(tetris_game *dest, tetris_game *src){
 // return the best position for tg->falling
 // we use block->typ to store the height
 // and row to store the points
-tetris_block dfs_solve(tetris_game *tg, int depth){
+tetris_block dfs_solve(const tetris_game *tg, int depth){
     // we reach the end, calculate the height and return.
     if(depth == DEPTH){
         tetris_block pos;
@@ -124,10 +124,9 @@ tetris_block dfs_solve(tetris_game *tg, int depth){
     int orientation, col_position, lines_cleared;
     tetris_block best_pos, next_pos;
     best_pos.typ = INT_MAX;
+    tetris_game *solver_tg = tg_create(tg->rows, tg->cols);
     for(int o = 0; o < NUM_ORIENTATIONS; o++){
-
         for(int c = 0; c < tg->cols; c++){
-            tetris_game *solver_tg = tg_create(tg->rows, tg->cols);
             tg_copy(solver_tg, tg);
 
             // first we move the piece to the leftmost
@@ -169,10 +168,6 @@ tetris_block dfs_solve(tetris_game *tg, int depth){
                 best_pos.loc.col = col_position;
                 best_pos.ori = orientation;
             }
-
-            // resume the board
-            tg_delete(solver_tg);
-            //tg_copy(solver_tg, tg);
         }
     } 
     
@@ -180,7 +175,7 @@ tetris_block dfs_solve(tetris_game *tg, int depth){
     return best_pos;
 }
 
-tetris_block openmp_dfs_solve(tetris_game *tg, int depth){
+tetris_block openmp_dfs_solve(const tetris_game *tg, int depth){
 
     int combination = NUM_ORIENTATIONS * tg->cols;
     tetris_block best_pos;
@@ -190,14 +185,14 @@ tetris_block openmp_dfs_solve(tetris_game *tg, int depth){
         int nthreads = omp_get_num_threads();
         int idx      = omp_get_thread_num();
         tetris_block next_pos;
+        int o, c;
+        int orientation, col_position, lines_cleared;
         while(idx < combination){
             struct timeval time; 
             gettimeofday(&time,NULL);
             suseconds_t start = time.tv_sec * 1000000 + time.tv_usec;
-            int o, c;
-            int orientation, col_position, lines_cleared;
-            o = idx / tg->cols;
-            c = idx % tg->cols;
+            o = idx % NUM_ORIENTATIONS;
+            c = idx / NUM_ORIENTATIONS;
             tetris_game *solver_tg = tg_create(tg->rows, tg->cols);
             tg_copy(solver_tg, tg);
 
@@ -218,8 +213,8 @@ tetris_block openmp_dfs_solve(tetris_game *tg, int depth){
             
             gettimeofday(&time,NULL);
             suseconds_t end = time.tv_sec * 1000000 + time.tv_usec;
-            printf("idx: %d took %fs\n", idx, (float)(end - start) / 1000000.0);
-            fflush(stdout);
+            //printf("idx: %d took %fs\n", idx, (float)(end - start) / 1000000.0);
+            //fflush(stdout);
             #pragma omp critical
             if(next_pos.typ < best_pos.typ){
                 if(DEBUG){

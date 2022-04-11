@@ -38,10 +38,10 @@
 #define COLS_PER_CELL 2
 #define MAXIMUM_MOVES 128
 #define USE_SOLVER 1
-#define GUI 0
+#define GUI 1
 #define DFS 1
 #define BFS 0
-#define TIME_LIMIT 10 // 60 seconds
+#define TIME_LIMIT 60 // 60 seconds
 #define DELAY 1
 #define NUM_OF_THREADS 8
 #define ROW 22

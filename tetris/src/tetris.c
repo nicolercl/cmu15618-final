@@ -31,7 +31,7 @@
 
 *******************************************************************************/
 
-tetris_location TETROMINOS[NUM_TETROMINOS][NUM_ORIENTATIONS][TETRIS] = {
+const tetris_location TETROMINOS[NUM_TETROMINOS][NUM_ORIENTATIONS][TETRIS] = {
   // I
   {{{1, 0}, {1, 1}, {1, 2}, {1, 3}},
    {{0, 2}, {1, 2}, {2, 2}, {3, 2}},
@@ -69,7 +69,7 @@ tetris_location TETROMINOS[NUM_TETROMINOS][NUM_ORIENTATIONS][TETRIS] = {
    {{0, 1}, {1, 0}, {1, 1}, {2, 0}}},
 };
 
-int GRAVITY_LEVEL[MAX_LEVEL+1] = {
+const int GRAVITY_LEVEL[MAX_LEVEL+1] = {
 // 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,
   50, 48, 46, 44, 42, 40, 38, 36, 34, 32,
 //10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
@@ -433,9 +433,11 @@ void tg_init(tetris_game *obj, int rows, int cols)
   obj->points = 0;
   obj->level = 0;
   obj->ticks_till_gravity = GRAVITY_LEVEL[obj->level];
+  /*
   struct timeval time; 
   gettimeofday(&time,NULL);
   srand((time.tv_sec * 1000) + (time.tv_usec / 1000));
+  */
   obj->lines_remaining = LINES_PER_LEVEL;
   for (int i = 0; i < NEXT_N + 1; i++)
     tg_new_falling(obj);
