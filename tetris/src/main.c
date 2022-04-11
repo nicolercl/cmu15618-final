@@ -31,6 +31,7 @@
 #include "dfs_solver.h"
 #include "bfs.h"
 #include "util.h"
+#include "parameters.h"
 
 /*
   2 columns per cell makes the game much nicer.
@@ -38,14 +39,17 @@
 #define COLS_PER_CELL 2
 #define MAXIMUM_MOVES 128
 #define USE_SOLVER 1
-#define GUI 1
+#define GUI 0
 #define DFS 1
 #define BFS 0
-#define TIME_LIMIT 60 // 60 seconds
+#define TIME_LIMIT 20 // 60 seconds
 #define DELAY 1
 #define NUM_OF_THREADS 8
 #define ROW 22
 #define COL 10
+
+// genetic algorithm params
+#define REPEAT 2
 
 /*
   Macro to print a cell of a specific type to a window.
@@ -53,6 +57,8 @@
 #define ADD_BLOCK(w,x) waddch((w),' '|A_REVERSE|COLOR_PAIR(x));     \
                        waddch((w),' '|A_REVERSE|COLOR_PAIR(x))
 #define ADD_EMPTY(w) waddch((w), ' '); waddch((w), ' ')
+
+parameters solver_params = {{1.0, 5.5, 0.5}};
 
 void get_moves(tetris_block falling, tetris_block result, int* moves){
     int move, step, ptr = 0;
@@ -210,55 +216,14 @@ void init_colors(void)
 /*
   Main tetris game!
  */
-int run_game(int height, int hole, int bumpiness)
+int run_game(parameters param)
 {
   tetris_game *tg;
   tetris_move move = TM_NONE;
   bool running = true;
   WINDOW *board, *next[NEXT_N], *hold, *score;
-#if WITH_SDL
-  Mix_Music *music;
-#endif
 
-  // Load file if given a filename.
-  // if (argc >= 2) {
-  //   FILE *f = fopen(argv[1], "r");
-  //   if (f == NULL) {
-  //     perror("tetris");
-  //     exit(EXIT_FAILURE);
-  //   }
-  //   tg = tg_load(f);
-  //   fclose(f);
-  // } else {
-  //   // Otherwise create new game.
-  //   tg = tg_create(22, 10);
-  // }
-
-// always create new game
-tg = tg_create(ROW, COL);
-
-#if WITH_SDL
-
-  // Initialize music.
-  if (SDL_Init(SDL_INIT_AUDIO) < 0) {
-    fprintf(stderr, "unable to initialize SDL\n");
-    exit(EXIT_FAILURE);
-  }
-  if (Mix_Init(MIX_INIT_MP3) != MIX_INIT_MP3) {
-    fprintf(stderr, "unable to initialize SDL_mixer\n");
-    exit(EXIT_FAILURE);
-  }
-  if (Mix_OpenAudio(MIX_DEFAULT_FREQUENCY, MIX_DEFAULT_FORMAT, 2, 1024) != 0) {
-    fprintf(stderr, "unable to initialize audio\n");
-    exit(EXIT_FAILURE);
-  }
-  Mix_AllocateChannels(1); // only need background music
-  music = Mix_LoadMUS("tetris.mp3");
-  if (music) {
-    Mix_PlayMusic(music, -1);
-  }
-
-#endif
+  tg = tg_create(ROW, COL);
 
   // NCURSES initialization:
   if(GUI){
@@ -304,8 +269,9 @@ tg = tg_create(ROW, COL);
         if(moves[action_ptr] == TM_NONE){
             tetris_block result;
             if (DFS) {
-                result = dfs_solver(tg);
+                result = dfs_solver(tg, param);
             } else if (BFS) {
+              int height, hole, bumpiness;
               result = solve(tg, height, hole, bumpiness);
             }
             get_moves(tg->falling, result, moves);
@@ -368,34 +334,93 @@ tg = tg_create(ROW, COL);
       endwin();
   }
 
-#if WITH_SDL
-
-  // Deinitialize Sound
-  Mix_HaltMusic();
-  Mix_FreeMusic(music);
-  Mix_CloseAudio();
-  Mix_Quit();
-
-#endif
-
   // Output ending message.
-  printf("Game over!\n");
-  printf("Height: %d, Hole: %d, Bumpiness: %d\n", height, hole, bumpiness);
+  printf("Height: %f, Hole: %f, Bumpiness: %f\n", param.weights[0], param.weights[1], param.weights[2]);
   printf("You finished with %d points on level %d.\n", tg->points, tg->level);
 
   // Deinitialize Tetris
   tg_delete(tg);
-  return 0;
+  return tg->points;
 }
+
+typedef struct {
+    parameters param;
+    int score;
+} candidate;
+
+void random_params(parameters *param){
+    for(int i = 0; i < sizeof(param->weights); i++)
+        param->weights[i] = (float)(rand() % 100) / 100.0;
+}
+
+int compare (const void * num1, const void * num2) {
+    if(((candidate*)num1)->score > ((candidate*)num2)->score)
+        return -1;
+    else
+        return 1;
+}
+
+const parameters generate_child(parameters *parent1, parameters *parent2){
+    parameters child;
+    for(int i = 0; i < sizeof(child.weights); i++){
+        if(rand() % 2 == 0)
+            child.weights[i] = parent1->weights[i];
+        else
+            child.weights[i] = parent2->weights[i];
+
+        // mutation
+        if(rand() % 5 == 0)
+            child.weights[i] += (float)(rand() % 20) / 100; 
+    }
+
+    return child;
+}
+int genetic_algorithm(){
+    candidate pool[10]; 
+    // init
+    for(int i = 0; i < 10; i++){
+        random_params(&(pool[i].param));
+    }
+    int count = 0; 
+    while(1){
+        for(int i = 0; i < 10; i++){
+            pool[i].score = 0;
+            for(int j = 0; j < REPEAT; j++)
+                pool[i].score += run_game(pool[i].param);
+        }
+
+
+        qsort(pool, 10, sizeof(candidate), compare);
+
+        parameters *best = &(pool->param);
+        printf("Generation %d Best Score %d height %f hole %f bumpiness %f\n", count, pool->score / REPEAT, best->weights[0], best->weights[1], best->weights[2]);
+
+        // generate children
+        for(int i = 0; i < 3; i++){
+            int j = i;
+            while(j == i){
+                j = rand() % 3;
+            }
+            const parameters *p1 = &(pool[i].param), *p2 = &(pool[j].param);
+            pool[i + 3].param = generate_child(p1, p2);
+        }
+
+        for(int i = 3 + 3; i < 10; i++){
+            random_params(&(pool[i].param));
+        }
+
+        count ++;
+    }
+
+
+} 
 
 int main(int argc, char **argv) {
-
+  struct timeval time; 
+  gettimeofday(&time,NULL);
+  srand((time.tv_sec * 1000) + (time.tv_usec / 1000));
   omp_set_num_threads(NUM_OF_THREADS);
-  for (int i = 1; i < 10; i++) {
-    for (int j = 1; j < 10; j++) {
-      for (int k = 1; k < 10; k++) {
-          run_game(i, j, k);
-      }
-    }
-  }
+  //run_game(solver_params);
+  genetic_algorithm();
 }
+

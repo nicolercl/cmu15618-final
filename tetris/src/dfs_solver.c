@@ -1,8 +1,9 @@
 #include "dfs_solver.h"
+#include "parameters.h"
 #include "sys/time.h"
 #include "omp.h"
 
-#define DEPTH 3
+#define DEPTH 2
 #define DEBUG 0
 bool tg_line_empty(tetris_game *obj, int i){
     for(int j = 0; j < obj->cols; j++){
@@ -80,14 +81,15 @@ int tg_get_height(tetris_game *obj){
     return obj->rows - 1 - row;
 }
 
-int tg_get_score(tetris_game *obj){
-    int score = 0;
+int tg_get_score(tetris_game *obj, const parameters param){
+    float score = 0;
     int h =  tg_get_height(obj);
     int holes = tg_get_holes_score(obj);
     int bump  = tg_get_bumpiness(obj);
-    score += 10 * h * h;
-    score += holes;
-    return score;
+    score += param.weights[0] * h * h;
+    score += param.weights[1] * holes;
+    score += param.weights[2] * bump;
+    return (int)score;
 }
 
 void tg_copy(tetris_game *dest, const tetris_game *src){
@@ -109,11 +111,11 @@ void tg_copy(tetris_game *dest, const tetris_game *src){
 // return the best position for tg->falling
 // we use block->typ to store the height
 // and row to store the points
-tetris_block dfs_solve(const tetris_game *tg, int depth){
+tetris_block dfs_solve(const tetris_game *tg, const parameters param, int depth){
     // we reach the end, calculate the height and return.
     if(depth == DEPTH){
         tetris_block pos;
-        pos.typ = tg_get_score(tg);
+        pos.typ = tg_get_score(tg, param);
         return pos;
     }
 
@@ -152,19 +154,9 @@ tetris_block dfs_solve(const tetris_game *tg, int depth){
 
             // this would give us the best pos and score of next block
             // since we already falled down current block
-            next_pos = dfs_solve(solver_tg, depth+1);
-
-            if(0){
-                fprintf(f, "O %d C: %d H: %d RH: %d\n", o, c, next_pos.typ, tg_get_score(solver_tg));
-                tg_print(solver_tg, f);
-            }
+            next_pos = dfs_solve(solver_tg, param, depth+1);
 
             if(next_pos.typ < best_pos.typ){
-                if(0){
-                    fprintf(f, "SOLUTION O %d C: %d H: %d RH: %d\n", o, c, next_pos.typ, tg_get_score(solver_tg));
-                    tg_print(solver_tg, f);
-                }
-
                 best_pos.typ = next_pos.typ;
                 best_pos.loc.col = col_position;
                 best_pos.ori = orientation;
@@ -176,7 +168,7 @@ tetris_block dfs_solve(const tetris_game *tg, int depth){
     return best_pos;
 }
 
-tetris_block openmp_dfs_solve(const tetris_game *tg, int depth){
+tetris_block openmp_dfs_solve(const tetris_game *tg, const parameters param, int depth){
 
     int combination = NUM_ORIENTATIONS * tg->cols;
     tetris_block best_pos;
@@ -210,7 +202,7 @@ tetris_block openmp_dfs_solve(const tetris_game *tg, int depth){
             lines_cleared = tg_check_lines(solver_tg);
             tg_adjust_score(solver_tg, lines_cleared);
             
-            next_pos = dfs_solve(solver_tg, depth+1);
+            next_pos = dfs_solve(solver_tg, param, depth+1);
             
             gettimeofday(&time,NULL);
             suseconds_t end = time.tv_sec * 1000000 + time.tv_usec;
@@ -218,14 +210,6 @@ tetris_block openmp_dfs_solve(const tetris_game *tg, int depth){
     //        fflush(stdout);
             #pragma omp critical
             if(next_pos.typ < best_pos.typ){
-                if(DEBUG){
-                    FILE *f;
-                    f = fopen("tetris.log", "a");
-                    fprintf(f, "SOLUTION Thread: %d O %d C: %d H: %d RH: %d\n", idx, o, c, next_pos.typ, tg_get_score(solver_tg));
-                    tg_print(solver_tg, f);
-                    fclose(f);
-                }
-
                 best_pos.typ = next_pos.typ;
                 best_pos.loc.col = col_position;
                 best_pos.ori = orientation;
@@ -238,7 +222,7 @@ tetris_block openmp_dfs_solve(const tetris_game *tg, int depth){
     return best_pos;
 }
 
-tetris_block dfs_solver(tetris_game *tg){
+tetris_block dfs_solver(tetris_game *tg, parameters param){
 
     struct timeval time; 
     gettimeofday(&time,NULL);
@@ -248,12 +232,12 @@ tetris_block dfs_solver(tetris_game *tg){
     tg->use_random = 0;
     tg_copy(solver_tg, tg);
     tetris_block result;
-    result = openmp_dfs_solve(solver_tg, 0);
+    result = openmp_dfs_solve(solver_tg, param, 0);
     tg_delete(solver_tg);
     tg->use_random = 1;
     gettimeofday(&time,NULL);
     suseconds_t end = time.tv_sec * 1000000 + time.tv_usec;
-    printf("Total: %f\n", (float)(end - start) / 1000000.0);
-    fflush(stdout);
+//    printf("Total: %f\n", (float)(end - start) / 1000000.0);
+ //   fflush(stdout);
     return result;
 }
