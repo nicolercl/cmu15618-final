@@ -151,7 +151,7 @@ static bool tg_fits(tetris_game *obj, tetris_block block)
 /*
   Return a random tetromino type.
  */
-static int random_tetromino(void) {
+static int random_tetromino() {
   return rand() % NUM_TETROMINOS;
 }
 
@@ -166,8 +166,11 @@ void tg_new_falling(tetris_game *obj)
 
   for (int i = 1; i < NEXT_N; i++)
     obj->next[i-1] = obj->next[i];
-  
-  obj->next[NEXT_N - 1].typ = random_tetromino();
+
+  int rand_typ = 0;
+  if(obj->use_random)
+    rand_typ = random_tetromino();
+  obj->next[NEXT_N - 1].typ = rand_typ;
   obj->next[NEXT_N - 1].ori = 0;
   obj->next[NEXT_N - 1].loc.row = 0;
   obj->next[NEXT_N - 1].loc.col = obj->cols/2 - 2;
@@ -433,6 +436,7 @@ void tg_init(tetris_game *obj, int rows, int cols)
   obj->points = 0;
   obj->level = 0;
   obj->ticks_till_gravity = GRAVITY_LEVEL[obj->level];
+  obj->use_random = 1;
   /*
   struct timeval time; 
   gettimeofday(&time,NULL);

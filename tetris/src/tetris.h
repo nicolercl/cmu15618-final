@@ -130,6 +130,7 @@ typedef struct {
     Number of lines until you advance to the next level.
    */
   int lines_remaining;
+  int use_random;
 } tetris_game;
 
 /*

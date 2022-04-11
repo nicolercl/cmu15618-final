@@ -103,6 +103,7 @@ void tg_copy(tetris_game *dest, const tetris_game *src){
     dest->lines_remaining = src->lines_remaining;
     dest->falling = src->falling;
     dest->stored  = src->stored;
+    dest->use_random = src->use_random;
 }
 
 // return the best position for tg->falling
@@ -187,13 +188,13 @@ tetris_block openmp_dfs_solve(const tetris_game *tg, int depth){
         tetris_block next_pos;
         int o, c;
         int orientation, col_position, lines_cleared;
+        tetris_game *solver_tg = tg_create(tg->rows, tg->cols);
         while(idx < combination){
             struct timeval time; 
             gettimeofday(&time,NULL);
             suseconds_t start = time.tv_sec * 1000000 + time.tv_usec;
             o = idx % NUM_ORIENTATIONS;
             c = idx / NUM_ORIENTATIONS;
-            tetris_game *solver_tg = tg_create(tg->rows, tg->cols);
             tg_copy(solver_tg, tg);
 
             tg_move(solver_tg, -solver_tg->falling.loc.col);
@@ -213,8 +214,8 @@ tetris_block openmp_dfs_solve(const tetris_game *tg, int depth){
             
             gettimeofday(&time,NULL);
             suseconds_t end = time.tv_sec * 1000000 + time.tv_usec;
-            //printf("idx: %d took %fs\n", idx, (float)(end - start) / 1000000.0);
-            //fflush(stdout);
+    //        printf("idx: %d took %fs\n", idx, (float)(end - start) / 1000000.0);
+    //        fflush(stdout);
             #pragma omp critical
             if(next_pos.typ < best_pos.typ){
                 if(DEBUG){
@@ -229,8 +230,6 @@ tetris_block openmp_dfs_solve(const tetris_game *tg, int depth){
                 best_pos.loc.col = col_position;
                 best_pos.ori = orientation;
             }
-
-            tg_delete(solver_tg);
             idx += nthreads;
         }
     }
@@ -245,10 +244,13 @@ tetris_block dfs_solver(tetris_game *tg){
     gettimeofday(&time,NULL);
     suseconds_t start = time.tv_sec * 1000000 + time.tv_usec;
     tetris_game *solver_tg = tg_create(tg->rows, tg->cols);
+    // before we solve, turn off rand()
+    tg->use_random = 0;
     tg_copy(solver_tg, tg);
     tetris_block result;
     result = openmp_dfs_solve(solver_tg, 0);
     tg_delete(solver_tg);
+    tg->use_random = 1;
     gettimeofday(&time,NULL);
     suseconds_t end = time.tv_sec * 1000000 + time.tv_usec;
     printf("Total: %f\n", (float)(end - start) / 1000000.0);
