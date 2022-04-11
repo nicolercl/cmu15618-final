@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
+#include <sys/time.h>
 
 #include "tetris.h"
 
@@ -30,7 +31,7 @@
 
 *******************************************************************************/
 
-tetris_location TETROMINOS[NUM_TETROMINOS][NUM_ORIENTATIONS][TETRIS] = {
+const tetris_location TETROMINOS[NUM_TETROMINOS][NUM_ORIENTATIONS][TETRIS] = {
   // I
   {{{1, 0}, {1, 1}, {1, 2}, {1, 3}},
    {{0, 2}, {1, 2}, {2, 2}, {3, 2}},
@@ -68,7 +69,7 @@ tetris_location TETROMINOS[NUM_TETROMINOS][NUM_ORIENTATIONS][TETRIS] = {
    {{0, 1}, {1, 0}, {1, 1}, {2, 0}}},
 };
 
-int GRAVITY_LEVEL[MAX_LEVEL+1] = {
+const int GRAVITY_LEVEL[MAX_LEVEL+1] = {
 // 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,
   50, 48, 46, 44, 42, 40, 38, 36, 34, 32,
 //10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
@@ -150,7 +151,7 @@ static bool tg_fits(tetris_game *obj, tetris_block block)
 /*
   Return a random tetromino type.
  */
-static int random_tetromino(void) {
+static int random_tetromino() {
   return rand() % NUM_TETROMINOS;
 }
 
@@ -165,8 +166,11 @@ void tg_new_falling(tetris_game *obj)
 
   for (int i = 1; i < NEXT_N; i++)
     obj->next[i-1] = obj->next[i];
-  
-  obj->next[NEXT_N - 1].typ = random_tetromino();
+
+  int rand_typ = 0;
+  if(obj->use_random)
+    rand_typ = random_tetromino();
+  obj->next[NEXT_N - 1].typ = rand_typ;
   obj->next[NEXT_N - 1].ori = 0;
   obj->next[NEXT_N - 1].loc.row = 0;
   obj->next[NEXT_N - 1].loc.col = obj->cols/2 - 2;
@@ -432,8 +436,13 @@ void tg_init(tetris_game *obj, int rows, int cols)
   obj->points = 0;
   obj->level = 0;
   obj->ticks_till_gravity = GRAVITY_LEVEL[obj->level];
+  obj->use_random = 1;
+  /*
+  struct timeval time; 
+  gettimeofday(&time,NULL);
+  srand((time.tv_sec * 1000) + (time.tv_usec / 1000));
+  */
   obj->lines_remaining = LINES_PER_LEVEL;
-  srand(time(NULL));
   for (int i = 0; i < NEXT_N + 1; i++)
     tg_new_falling(obj);
   // tg_new_falling(obj);
