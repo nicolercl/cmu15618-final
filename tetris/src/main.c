@@ -369,8 +369,13 @@ const parameters generate_child(parameters *parent1, parameters *parent2){
             child.weights[i] = parent2->weights[i];
 
         // mutation
-        if(rand() % 5 == 0)
-            child.weights[i] += (float)(rand() % 20) / 100; 
+        if(rand() % 5 == 0){
+            if(rand () % 2 == 0)
+                child.weights[i] += (float)(rand() % 20) / 100; 
+            else
+                child.weights[i] -= (float)(rand() % 20) / 100; 
+
+        }
     }
 
     return child;
