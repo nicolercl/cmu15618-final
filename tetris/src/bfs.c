@@ -4,6 +4,11 @@
 
 #define QUEUE_SIZE 2000000 //1679616
 
+void delete_state(state *state) {
+    free(state->board);
+    free(state);
+}
+
 /*
   Print a game board
  */
@@ -88,56 +93,80 @@ state* update_state(tetris_game* game, state *oldstate) {
     return init_state(copy->board, game->cols, game->rows, oldstate, level - removeLines);
 }
 
+state* bfs(queue* q, tetris_game *game) {
+    state *best;
+    int board_size = game->rows * game->cols;
+    int q_size = size(q);
+    int level = game->rows;
+    int cols = game->cols;
+
+    for (int i = 0; i < q_size; i++){
+        state *cur_s = front(q);
+        pop(q);
+
+        // make a copy for rotate with applied state
+        tetris_game* rotate = apply_state(game, cur_s, board_size);
+
+        // if last step, stop expanding
+        if (cur_s->level <= level) {
+            level = cur_s->level;
+            best = init_state(cur_s->board, rotate->rows, rotate->cols, cur_s, level);
+        }
+
+        for (int ori = 1; ori <= 4; ori++) { // orientation
+            // rotate clock-wise
+            tg_handle_move(rotate, TM_CLOCK);
+
+            // make a copy for shift
+            tetris_game* shift = deep_copy(rotate);
+
+            for (int c = 0; c < cols; c++) { // right shift
+                tg_move(shift, -shift->falling.loc.col);
+                tg_move(shift, c);
+                tetris_game *obj = deep_copy(shift);           // make a copy for drop
+                tg_handle_move(obj, TM_DROP);
+
+                state * new_s = update_state(obj, cur_s);
+                push(q, new_s);
+                tg_delete(obj);
+            }
+            tg_delete(shift);
+        }
+        delete_state(cur_s);
+        tg_delete(rotate);
+    }
+    return best;
+}
+
 /**
  * solve.
  * @param[in] game
  * @param[out] orientation
  * @param[out] offset
  */
-tetris_block solve(tetris_game* tg, int height, int hole, int bumpiness) {
+tetris_block solve(tetris_game* tg, int height, int hole, int bumpiness, int n_threads) {
     tetris_game* game = deep_copy(tg);
 
     int board_size = game->rows * game->cols;
+    queue* queues[n_threads];
+    state* states[n_threads];
+    tetris_game* games[n_threads];
     tetris_block falling = game->falling;
 
-    queue* q = create_queue(QUEUE_SIZE);
     state* start = init_state(game->board, game->rows, game->cols, NULL, get_level(game, game->rows, game->cols));
-    push(q, start);
 
-    // fprintf(stderr, "solve\n");
-    // print(game->board, game->rows, game->cols);
-    // fprintf(stderr, "==========\n");
+    for (int i = 0; i < n_threads; i++) {
+        queues[i] = create_queue(QUEUE_SIZE / n_threads);
+    }
 
     int steps = 0;
-    int cols = game->cols;
-    int level = game->rows;
 
-    while(steps <= NEXT_N-3) {
+    while(steps <= NEXT_N-2) {
         // all possible states of the previous step
-        // printf("Step %d queue size: %d\n", steps, size(q));
-        for (int q_size = size(q); q_size > 0; q_size--) {
-            state *cur_s = front(q);
-            pop(q);
+        if (steps == 0) {
+
             // make a copy for rotate with applied state
-            tetris_game* rotate = apply_state(game, cur_s, board_size);
-
-            // check if game over
-            if (tg_game_over(rotate)) {
-                falling.ori = cur_s->ori;
-                falling.loc.col = cur_s->col;
-                return falling;
-            }
-
-            // if last step, stop expanding
-            if (steps == NEXT_N-3 && cur_s->level <= level) {
-                falling.ori = cur_s->ori;
-                falling.loc.col = cur_s->col;
-                level = cur_s->level;
-                // fprintf(stderr, "update better\n");
-                // print(cur_s->board, game->rows, game->cols);
-                // fprintf(stderr, "==========\n");
-                continue;
-            }
+            tetris_game* rotate = apply_state(game, start, board_size);
 
             for (int i = 1; i <= 4; i++) { // orientation
                 // rotate clock-wise
@@ -145,35 +174,32 @@ tetris_block solve(tetris_game* tg, int height, int hole, int bumpiness) {
 
                 // make a copy for shift
                 tetris_game* shift = deep_copy(rotate);
-                for (int left = 1; left < cols/2; left++) { // left shift
-                    tg_handle_move(shift, TM_LEFT);
-                    tetris_game* obj = deep_copy(shift);     // make a copy for drop
-                    int col = obj->falling.loc.col;
-                    tg_handle_move(obj, TM_DROP);
-                    
-                    state * new_s = update_state(obj, cur_s);
-                    if (steps == 0) {
-                        save_first_move(new_s, i % 4, col);
-                    }
-                    push(q, new_s);
-                }
 
-                // reset shift copy back to 1 col to the left of origin
-                for (int right = 1; right < cols/2 - 1; right++)
-                    tg_handle_move(shift, TM_RIGHT);
-
-                for (int right = 0; right < cols/2; right++) { // right shift
-                    tg_handle_move(shift, TM_RIGHT);
+                for (int c = 0; c < game->cols; c++) { // right shift
+                    tg_move(shift, -shift->falling.loc.col);
+                    tg_move(shift, c);
                     tetris_game *obj = deep_copy(shift);           // make a copy for drop
                     int col = obj->falling.loc.col;
                     tg_handle_move(obj, TM_DROP);
 
-                    state * new_s = update_state(obj, cur_s);
-                    if (steps == 0) {
-                        save_first_move(new_s, i, col);
-                    }
-                    push(q, new_s);
+                    state * new_s = update_state(obj, start);
+
+                    save_first_move(new_s, i % 4, col);
+                    push(queues[c % n_threads], new_s);
+                    tg_delete(obj);
                 }
+                tg_delete(shift);
+            }
+            tg_delete(rotate);
+        } 
+        else {
+            for (int i = 0; i < n_threads; i++)
+                games[i] = deep_copy(game);
+
+            #pragma omp parallel for default(shared) schedule(dynamic)
+            for (int i = 0; i < n_threads; i++) {
+                states[i] = bfs(queues[i], games[i]);
+                tg_delete(games[i]);
             }
         }
         steps++;
@@ -182,7 +208,19 @@ tetris_block solve(tetris_game* tg, int height, int hole, int bumpiness) {
         tg_new_falling(game);
         tg_put(game, game->falling);
     }
-    // fprintf(stderr, "loc: %d, ori: %d\n", falling.loc.col, falling.ori);
-    // fprintf(stderr, "========s===============\n");
+
+    int level = game->rows;
+    for (int i = 0; i < n_threads; i++) {
+        if (states[i]->level < level) {
+            falling.ori = states[i]->ori;
+            falling.loc.col = states[i]->col;
+            level = states[i]->level;
+        }
+    }
+    for (int i = 0; i < n_threads; i++) {
+        delete_queue(queues[i]);
+        delete_state(states[i]);
+    }
+    tg_delete(game);
     return falling;
 }

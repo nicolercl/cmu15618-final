@@ -1,12 +1,10 @@
 #include "queue.h"
+#include "assert.h"
 
 queue* create_queue(int n) {
     queue* q = (queue*) malloc(sizeof(queue));
     q->capacity = n;
     q->array = (state**) malloc(sizeof(state*) * n);
-    for (int i = 0; i < n; i++) {
-        q->array[i] = (state*) malloc(sizeof(state));
-    }
     q->front = 0;
     q->size = 0;
     q->rear = n - 1;
@@ -15,7 +13,7 @@ queue* create_queue(int n) {
 
 state* front(queue *q){
     if (q->size == 0)
-        return NULL;
+        assert(0);
     return q->array[q->front];
 }
 void push(queue *q, state* s){
@@ -31,4 +29,10 @@ void pop(queue *q){
 }
 int size(queue *q){
     return q->size;
+}
+
+void delete_queue(queue *q) {
+    int n = q->capacity;
+    free(q->array);
+    free(q);
 }

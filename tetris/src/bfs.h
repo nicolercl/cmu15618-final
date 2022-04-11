@@ -4,7 +4,6 @@
 #include <stdio.h> // for FILE
 #include <stdbool.h> // for bool
 #include "tetris.h"
-
 #define BFS_LEVEL 4
 
 typedef struct {
@@ -15,6 +14,5 @@ typedef struct {
     int col;
 } state;
 
-tetris_block solve(tetris_game* game, int height, int hole, int bumpiness);
-
+tetris_block solve(tetris_game* game, int height, int hole, int bumpiness, int n_threads);
 #endif // BFS_H

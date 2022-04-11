@@ -21,5 +21,6 @@ state* front(queue *q);
 void push(queue *q, state* s);
 void pop(queue *q);
 int size(queue *q);
+void delete_queue(queue *q);
 
 #endif // QUEUE_H
