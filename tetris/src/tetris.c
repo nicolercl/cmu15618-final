@@ -30,6 +30,7 @@
                                Array Definitions
 
 *******************************************************************************/
+const int tetris_orientation_number[NUM_TETROMINOS] = {2, 4, 4, 1, 2, 4, 2};
 
 const tetris_location TETROMINOS[NUM_TETROMINOS][NUM_ORIENTATIONS][TETRIS] = {
   // I
@@ -167,13 +168,13 @@ void tg_new_falling(tetris_game *obj)
   for (int i = 1; i < NEXT_N; i++)
     obj->next[i-1] = obj->next[i];
 
-  int rand_typ = 0;
-  if(obj->use_random)
-    rand_typ = random_tetromino();
+  if(!obj->use_random) return;
+  int rand_typ = random_tetromino();
   obj->next[NEXT_N - 1].typ = rand_typ;
   obj->next[NEXT_N - 1].ori = 0;
   obj->next[NEXT_N - 1].loc.row = 0;
   obj->next[NEXT_N - 1].loc.col = obj->cols/2 - 2;
+  
 }
 
 /*******************************************************************************
@@ -236,7 +237,6 @@ void tg_down(tetris_game *obj)
 void tg_rotate(tetris_game *obj, int direction)
 {
   tg_remove(obj, obj->falling);
-
   while (true) {
     obj->falling.ori = (obj->falling.ori + direction) % NUM_ORIENTATIONS;
 

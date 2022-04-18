@@ -29,27 +29,30 @@
 
 #include "tetris.h"
 #include "dfs_solver.h"
+#include "solver.h"
 #include "bfs.h"
 #include "util.h"
 #include "parameters.h"
-
+#include <assert.h>
 /*
   2 columns per cell makes the game much nicer.
  */
 #define COLS_PER_CELL 2
 #define MAXIMUM_MOVES 128
 #define USE_SOLVER 1
-#define GUI 0
-#define DFS 1
+#define GUI 1
+#define DFS 0
 #define BFS 0
-#define TIME_LIMIT 20 // 60 seconds
+#define SOL 1
+#define DEPTH 4
+#define TIME_LIMIT 1000 // 60 seconds
 #define DELAY 1
 #define NUM_OF_THREADS 8
 #define ROW 22
 #define COL 10
 
 // genetic algorithm params
-#define REPEAT 2
+#define REPEAT 10
 
 /*
   Macro to print a cell of a specific type to a window.
@@ -58,11 +61,11 @@
                        waddch((w),' '|A_REVERSE|COLOR_PAIR(x))
 #define ADD_EMPTY(w) waddch((w), ' '); waddch((w), ' ')
 
-parameters solver_params = {{1.0, 5.5, 0.5}};
+const parameters solver_params = {{1.0, 5.5, 0.14}};
 
 void get_moves(tetris_block falling, tetris_block result, int* moves){
     int move, step, ptr = 0;
-    
+    assert(falling.ori == 0); 
     // move for orientations
     move = (falling.ori < result.ori) ? TM_CLOCK: TM_COUNTER;
     step = (falling.ori < result.ori) ? 1 : -1;
@@ -267,15 +270,26 @@ int run_game(parameters param)
 
     if(USE_SOLVER){
         if(moves[action_ptr] == TM_NONE){
+            struct timeval time; 
+            gettimeofday(&time,NULL);
+            suseconds_t start = time.tv_sec * 1000000 + time.tv_usec;
+
             tetris_block result;
             if (DFS) {
                 result = dfs_solver(tg, param);
             } else if (BFS) {
               int height, hole, bumpiness;
               result = solve(tg, height, hole, bumpiness);
+            } else if (SOL){
+                result = solver(tg, param, DEPTH, NUM_OF_THREADS);
             }
             get_moves(tg->falling, result, moves);
             action_ptr = 0;
+
+            gettimeofday(&time,NULL);
+            suseconds_t end = time.tv_sec * 1000000 + time.tv_usec;
+            printf("Total: %f\n", (float)(end - start) / 1000000.0);
+            fflush(stdout);
         }
         move = moves[action_ptr++];
 
@@ -335,8 +349,8 @@ int run_game(parameters param)
   }
 
   // Output ending message.
-  printf("Height: %f, Hole: %f, Bumpiness: %f\n", param.weights[0], param.weights[1], param.weights[2]);
-  printf("You finished with %d points on level %d.\n", tg->points, tg->level);
+//  printf("Height: %f, Hole: %f, Bumpiness: %f\n", param.weights[0], param.weights[1], param.weights[2]);
+ // printf("You finished with %d points on level %d.\n", tg->points, tg->level);
 
   // Deinitialize Tetris
   tg_delete(tg);
@@ -362,7 +376,8 @@ int compare (const void * num1, const void * num2) {
 
 const parameters generate_child(parameters *parent1, parameters *parent2){
     parameters child;
-    for(int i = 0; i < sizeof(child.weights); i++){
+    unsigned int l = sizeof(child.weights);
+    for (unsigned int i = 0; i < l; i++){
         if(rand() % 2 == 0)
             child.weights[i] = parent1->weights[i];
         else
@@ -371,9 +386,9 @@ const parameters generate_child(parameters *parent1, parameters *parent2){
         // mutation
         if(rand() % 5 == 0){
             if(rand () % 2 == 0)
-                child.weights[i] += (float)(rand() % 20) / 100; 
+                child.weights[i] += (float)(rand() % 10) / 100; 
             else
-                child.weights[i] -= (float)(rand() % 20) / 100; 
+                child.weights[i] -= (float)(rand() % 10) / 100; 
 
         }
     }
@@ -381,41 +396,46 @@ const parameters generate_child(parameters *parent1, parameters *parent2){
     return child;
 }
 int genetic_algorithm(){
-    candidate pool[10]; 
+    candidate pool[12]; 
+    FILE *f;
+    f = fopen("gen.log", "w");
     // init
-    for(int i = 0; i < 10; i++){
+    for(int i = 0; i < 12; i++){
         random_params(&(pool[i].param));
     }
     int count = 0; 
     while(1){
-        for(int i = 0; i < 10; i++){
+        for(int i = 0; i < 12; i++){
             pool[i].score = 0;
             for(int j = 0; j < REPEAT; j++)
                 pool[i].score += run_game(pool[i].param);
         }
 
 
-        qsort(pool, 10, sizeof(candidate), compare);
+        qsort(pool, 12, sizeof(candidate), compare);
 
         parameters *best = &(pool->param);
+        fprintf(f, "Generation %d Best Score %d height %f hole %f bumpiness %f\n", count, pool->score / REPEAT, best->weights[0], best->weights[1], best->weights[2]);
+        fflush(f);
         printf("Generation %d Best Score %d height %f hole %f bumpiness %f\n", count, pool->score / REPEAT, best->weights[0], best->weights[1], best->weights[2]);
-
         // generate children
-        for(int i = 0; i < 3; i++){
+        for(int i = 0; i < 5; i++){
             int j = i;
             while(j == i){
-                j = rand() % 3;
+                j = rand() % 5;
             }
             const parameters *p1 = &(pool[i].param), *p2 = &(pool[j].param);
-            pool[i + 3].param = generate_child(p1, p2);
+            pool[i + 5].param = generate_child(p1, p2);
         }
 
-        for(int i = 3 + 3; i < 10; i++){
+        for(int i = 5 + 5; i < 12; i++){
             random_params(&(pool[i].param));
         }
 
         count ++;
     }
+
+    fclose(f);
 
 
 } 
@@ -425,7 +445,7 @@ int main(int argc, char **argv) {
   gettimeofday(&time,NULL);
   srand((time.tv_sec * 1000) + (time.tv_usec / 1000));
   omp_set_num_threads(NUM_OF_THREADS);
-  //run_game(solver_params);
-  genetic_algorithm();
+  run_game(solver_params);
+  //genetic_algorithm();
 }
 
