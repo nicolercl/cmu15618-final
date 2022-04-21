@@ -12,10 +12,10 @@
 # See the LICENSE.txt file for details.
 #
 #-------------------------------------------------------------------------------
-
+# -fopenmp=libomp
 # Compiler Variable Declarations
-CC=gcc
-FLAGS=-O3 -Wall -pedantic -fopenmp -Wno-unknown-pragmas
+CC=clang
+FLAGS=-O3 -Wall -pedantic -fcilkplus
 INC=-Isrc/
 CFLAGS=$(FLAGS) -c -g --std=c99 $(INC)
 LFLAGS=$(FLAGS) -lncurses

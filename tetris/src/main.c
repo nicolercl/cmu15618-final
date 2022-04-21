@@ -20,7 +20,6 @@
 #include <sys/time.h>
 #include <ncurses.h>
 #include <string.h>
-#include <omp.h>
 
 #if WITH_SDL
 # include <SDL/SDL.h>
@@ -28,11 +27,12 @@
 #endif
 
 #include "tetris.h"
-#include "dfs_solver.h"
-#include "solver.h"
-#include "bfs.h"
+// #include "dfs_solver.h"
+// #include "solver.h"
+// #include "bfs.h"
 #include "util.h"
 #include "parameters.h"
+#include "dfs_cilk.h"
 #include <assert.h>
 /*
   2 columns per cell makes the game much nicer.
@@ -43,13 +43,15 @@
 #define GUI 1
 #define DFS 0
 #define BFS 0
-#define SOL 1
+#define SOL 0
 #define DEPTH 3
+#define CILK 1
 #define TIME_LIMIT 1000 // 60 seconds
 #define DELAY 30
 #define NUM_OF_THREADS 8
 #define ROW 22
 #define COL 10
+#define DFS_DP 0
 
 // genetic algorithm params
 #define REPEAT 10
@@ -256,7 +258,7 @@ int run_game(parameters param)
   time_t start;
   start = time(NULL);
   // Game loop
-  while (running && time(NULL) - start < TIME_LIMIT) {
+  while (running) {
     running = tg_tick(tg, move);
 
     if(GUI){
@@ -284,6 +286,8 @@ int run_game(parameters param)
                 dfs_solver(tg, param, result);
             } else if (SOL){
                 solver(tg, param, DEPTH, NUM_OF_THREADS, result);
+            } else if (CILK) {
+                result = dfs_cilk(tg, param);
             }
 
             gettimeofday(&time,NULL);
