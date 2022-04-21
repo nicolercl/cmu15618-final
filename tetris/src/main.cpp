@@ -283,18 +283,14 @@ int run_game(parameters param)
             gettimeofday(&time,NULL);
             suseconds_t start = time.tv_sec * 1000000 + time.tv_usec;
 
-            if (DFS) {
-                // dfs_solver(tg, param, result);
-            } else if (SOL){
-                // solver(tg, param, DEPTH, NUM_OF_THREADS, result);
-            } else if (CILK) {
+            if (CILK) {
                 result = dfs_cilk(tg, param);
             }
 
             gettimeofday(&time,NULL);
             suseconds_t end = time.tv_sec * 1000000 + time.tv_usec;
-            //printf("Total: %f\n", (float)(end - start) / 1000000.0);
-            //fflush(stdout);
+            printf("Total: %f\n", (float)(end - start) / 1000000.0);
+            fflush(stdout);
 
             get_moves(tg->falling, result, moves);
             action_ptr = 0;

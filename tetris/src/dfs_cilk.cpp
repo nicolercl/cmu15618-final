@@ -5,6 +5,14 @@
 #define DEPTH 2
 #define DEBUG 0
 
+struct min_comp
+{
+    bool operator() (const tetris_block &block1, const tetris_block &block2) const
+    {
+        return block1.typ < block2.typ;
+    }
+};
+
 tetris_block dfs_solve(tetris_game *tg, const parameters param, int depth){
     // we reach the end, calculate the height and return.
     if(depth == DEPTH){
@@ -21,9 +29,10 @@ tetris_block dfs_solve(tetris_game *tg, const parameters param, int depth){
     }
 
     // int orientation, col_position, lines_cleared;
-    tetris_block best_pos;
-    tetris_block next_pos[NUM_ORIENTATIONS * tg->cols];
+    tetris_block best_pos = tg->falling;
     best_pos.typ = INT_MAX;
+    cilk::reducer_min<tetris_block, min_comp> reducer_best_pos;
+
     cilk_for (int o = 0; o < NUM_ORIENTATIONS; o++){
         cilk_for (int c = 0; c < tg->cols; c++){
             tetris_game *solver_tg = tg_create(tg->rows, tg->cols);
@@ -51,29 +60,18 @@ tetris_block dfs_solve(tetris_game *tg, const parameters param, int depth){
 
             // this would give us the best pos and score of next block
             // since we already falled down current block
-            int i = o * tg->cols + c;
-            next_pos[i] = dfs_solve(solver_tg, param, depth+1);
-            next_pos[i].loc.col = col_position;
-            next_pos[i].ori = orientation;
+            tetris_block next_pos = dfs_solve(solver_tg, param, depth+1);
+            next_pos.loc.col = col_position;
+            next_pos.ori = orientation;
 
-            // if(next_pos.typ < best_pos.typ){
-            //     best_pos.typ = next_pos.typ;
-            //     best_pos.loc.col = col_position;
-            //     best_pos.ori = orientation;
-            // }
+            *reducer_best_pos = cilk::min_of(*reducer_best_pos, next_pos);
         }
     }
 
-    cilk_sync;
-    for (int i = 0; i < NUM_ORIENTATIONS * tg->cols; i++) {
-        if(next_pos[i].typ < best_pos.typ){
-            best_pos.typ = next_pos[i].typ;
-            best_pos.loc.col = next_pos[i].loc.col;
-            best_pos.ori = next_pos[i].ori;
-        }
-    }
+    // cilk_sync;
     
     // fclose(f);
+    best_pos = reducer_best_pos.get_value();
     return best_pos;
 }
 
