@@ -60,6 +60,8 @@
 */
 #define NEXT_N 4
 
+#define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
+#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 /*
   A "cell" is a 1x1 block within a tetris board.
  */
@@ -131,6 +133,7 @@ typedef struct {
    */
   int lines_remaining;
   int use_random;
+  int line_cleared;
 } tetris_game;
 
 const int tetris_orientation_number[NUM_TETROMINOS];

@@ -5,7 +5,7 @@
 #include <limits.h>
 #include "parameters.h"
 #include "tetris.h"
-tetris_block dfs_solver(tetris_game* tg, parameters param);
+void dfs_solver(tetris_game* tg, parameters param, tetris_block *result);
 
 
 #endif

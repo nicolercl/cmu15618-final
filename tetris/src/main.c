@@ -44,9 +44,9 @@
 #define DFS 0
 #define BFS 0
 #define SOL 1
-#define DEPTH 4
+#define DEPTH 3
 #define TIME_LIMIT 1000 // 60 seconds
-#define DELAY 1
+#define DELAY 30
 #define NUM_OF_THREADS 8
 #define ROW 22
 #define COL 10
@@ -61,7 +61,6 @@
                        waddch((w),' '|A_REVERSE|COLOR_PAIR(x))
 #define ADD_EMPTY(w) waddch((w), ' '); waddch((w), ' ')
 
-const parameters solver_params = {{1.0, 5.5, 0.14}};
 
 void get_moves(tetris_block falling, tetris_block result, int* moves){
     int move, step, ptr = 0;
@@ -81,6 +80,7 @@ void get_moves(tetris_block falling, tetris_block result, int* moves){
     }
     moves[ptr++] = TM_DROP;
     moves[ptr] = TM_NONE;
+    return ptr;
 }
 
 /*
@@ -225,6 +225,8 @@ int run_game(parameters param)
   tetris_move move = TM_NONE;
   bool running = true;
   WINDOW *board, *next[NEXT_N], *hold, *score;
+  // fix seed to get same result for genetic algo
+  srand(41);
 
   tg = tg_create(ROW, COL);
 
@@ -246,6 +248,7 @@ int run_game(parameters param)
   }
 
   // solver init
+  tetris_block* result = malloc(sizeof(tetris_block) * DEPTH);
   int moves[MAXIMUM_MOVES];
   int action_ptr = 0;
   moves[0] = TM_NONE;
@@ -269,28 +272,29 @@ int run_game(parameters param)
 
 
     if(USE_SOLVER){
+
+        // if we run out of move, call the solver
         if(moves[action_ptr] == TM_NONE){
+
             struct timeval time; 
             gettimeofday(&time,NULL);
             suseconds_t start = time.tv_sec * 1000000 + time.tv_usec;
 
-            tetris_block result;
             if (DFS) {
-                result = dfs_solver(tg, param);
-            } else if (BFS) {
-              int height, hole, bumpiness;
-              result = solve(tg, height, hole, bumpiness);
+                dfs_solver(tg, param, result);
             } else if (SOL){
-                result = solver(tg, param, DEPTH, NUM_OF_THREADS);
+                solver(tg, param, DEPTH, NUM_OF_THREADS, result);
             }
-            get_moves(tg->falling, result, moves);
-            action_ptr = 0;
 
             gettimeofday(&time,NULL);
             suseconds_t end = time.tv_sec * 1000000 + time.tv_usec;
-            printf("Total: %f\n", (float)(end - start) / 1000000.0);
-            fflush(stdout);
+            //printf("Total: %f\n", (float)(end - start) / 1000000.0);
+            //fflush(stdout);
+
+            get_moves(tg->falling, *result, moves);
+            action_ptr = 0;
         }
+
         move = moves[action_ptr++];
 
     } else {
@@ -348,9 +352,9 @@ int run_game(parameters param)
       endwin();
   }
 
-  // Output ending message.
-//  printf("Height: %f, Hole: %f, Bumpiness: %f\n", param.weights[0], param.weights[1], param.weights[2]);
- // printf("You finished with %d points on level %d.\n", tg->points, tg->level);
+  // Output ending message
+//  printf("height %f hole %f bumpiness %f clear_line %f\n", param.weights[0], param.weights[1], param.weights[2], param.weights[3]);
+//  printf("You finished with %d points on level %d.\n", tg->points, tg->level);
 
   // Deinitialize Tetris
   tg_delete(tg);
@@ -364,7 +368,7 @@ typedef struct {
 
 void random_params(parameters *param){
     for(int i = 0; i < sizeof(param->weights); i++)
-        param->weights[i] = (float)(rand() % 100) / 100.0;
+        param->weights[i] = (float)(rand() % 1000) / 100.0;
 }
 
 int compare (const void * num1, const void * num2) {
@@ -386,9 +390,9 @@ const parameters generate_child(parameters *parent1, parameters *parent2){
         // mutation
         if(rand() % 5 == 0){
             if(rand () % 2 == 0)
-                child.weights[i] += (float)(rand() % 10) / 100; 
+                child.weights[i] += (float)(rand() % 100) / 100; 
             else
-                child.weights[i] -= (float)(rand() % 10) / 100; 
+                child.weights[i] -= (float)(rand() % 100) / 100; 
 
         }
     }
@@ -405,19 +409,21 @@ int genetic_algorithm(){
     }
     int count = 0; 
     while(1){
-        for(int i = 0; i < 12; i++){
+        for(int i = 0; i < 12; i++)
             pool[i].score = 0;
-            for(int j = 0; j < REPEAT; j++)
+        
+        for(int j = 0; j < REPEAT; j++){
+            for(int i = 0; i < 12; i++){
                 pool[i].score += run_game(pool[i].param);
+            }
         }
 
-
         qsort(pool, 12, sizeof(candidate), compare);
-
+        printf("%d %d\n", pool[0].score, pool[1].score);
         parameters *best = &(pool->param);
-        fprintf(f, "Generation %d Best Score %d height %f hole %f bumpiness %f\n", count, pool->score / REPEAT, best->weights[0], best->weights[1], best->weights[2]);
+        fprintf(f, "Generation %d Best Score %d height %f hole %f bumpiness %f clear_line %f\n", count, pool->score / REPEAT, best->weights[0], best->weights[1], best->weights[2], best->weights[3]);
+        printf("Generation %d Best Score %d height %f hole %f bumpiness %f clear_line %f\n", count, pool->score / REPEAT, best->weights[0], best->weights[1], best->weights[2], best->weights[3]);
         fflush(f);
-        printf("Generation %d Best Score %d height %f hole %f bumpiness %f\n", count, pool->score / REPEAT, best->weights[0], best->weights[1], best->weights[2]);
         // generate children
         for(int i = 0; i < 5; i++){
             int j = i;
@@ -434,18 +440,19 @@ int genetic_algorithm(){
 
         count ++;
     }
-
     fclose(f);
-
-
-} 
+}
 
 int main(int argc, char **argv) {
   struct timeval time; 
   gettimeofday(&time,NULL);
-  srand((time.tv_sec * 1000) + (time.tv_usec / 1000));
+  //srand((time.tv_sec * 1000) + (time.tv_usec / 1000));
   omp_set_num_threads(NUM_OF_THREADS);
+  int p[4] = {1.0, 10.0, 0.0, 100.0};
+  parameters solver_params;
+  for(int i = 0; i < 4; i++)
+    solver_params.weights[i] = p[i];
   run_game(solver_params);
-  //genetic_algorithm();
+//  genetic_algorithm();
 }
 

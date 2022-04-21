@@ -22,15 +22,13 @@
 
 #include "tetris.h"
 
-#define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
-#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 
 /*******************************************************************************
 
                                Array Definitions
 
 *******************************************************************************/
-const int tetris_orientation_number[NUM_TETROMINOS] = {2, 4, 4, 1, 2, 4, 2};
+const int tetris_orientation_number[NUM_TETROMINOS] = {4, 4, 4, 4, 4, 4, 4};
 
 const tetris_location TETROMINOS[NUM_TETROMINOS][NUM_ORIENTATIONS][TETRIS] = {
   // I
@@ -360,6 +358,7 @@ int tg_check_lines(tetris_game *obj)
   }
 
   tg_put(obj, obj->falling); // replace
+  obj->line_cleared += nlines;
   return nlines;
 }
 

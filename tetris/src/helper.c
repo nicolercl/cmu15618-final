@@ -1,4 +1,5 @@
 #include "helper.h"
+#include <assert.h>
 bool tg_line_empty(tetris_game *obj, int i){
     for(int j = 0; j < obj->cols; j++){
         if(TC_IS_FILLED(tg_get(obj, i, j)))
@@ -28,16 +29,18 @@ int tg_poly(int x, int degree){
 
 int tg_get_holes_score(tetris_game *obj){
     int score = 0;
-    int up_degree = 1;
-    int side_degree = 0;
+    int up_degree = 3;
+    int side_degree = 2;
 
     for(int i = 0; i < obj->rows; i++){
         for(int j = 0; j < obj->cols; j++){
             if(TC_IS_FILLED(tg_get(obj, i, j)))
                 continue;
 
-            if(tg_check(obj, i-1, j) && TC_IS_FILLED(tg_get(obj, i-1, j))){
-                score += tg_poly(obj->rows - i, up_degree);
+            for(int k = i-1; k >= i-1 ; k--){
+                if(tg_check(obj, k, j) && TC_IS_FILLED(tg_get(obj, k, j))){
+                    score += tg_poly(obj->rows - i, up_degree);
+                }
             }
 
             if(tg_check(obj, i, j+1) && TC_IS_FILLED(tg_get(obj, i, j+1))){
@@ -67,26 +70,31 @@ int tg_get_bumpiness(tetris_game *obj){
 
 int tg_get_height(tetris_game *obj){
     int row;
-    for(row = obj->rows - 1; row >= 0; row--){
-        if(tg_line_empty(obj, row))
+    for(row = 0; row < obj->rows; row++){
+        if(!tg_line_empty(obj, row))
             break;
     }
+//    assert(obj->rows == 22);
+    // assert(row >= 0 && row < obj->rows);
     return obj->rows - 1 - row;
 }
 
 int tg_get_score(tetris_game *obj, const parameters param){
     float score = 0;
-    int h =  tg_get_height(obj);
-    int holes = tg_get_holes_score(obj);
-    int bump  = tg_get_bumpiness(obj);
+    float h =  (float)tg_get_height(obj);
+    float holes = (float)tg_get_holes_score(obj);
+    float bump  = (float)tg_get_bumpiness(obj);
     score += param.weights[0] * h * h;
     score += param.weights[1] * holes;
     score += param.weights[2] * bump;
+    if(obj->line_cleared >= 2)
+        score -= param.weights[3] * (obj->line_cleared * obj->line_cleared);
     return (int)score;
 }
 
 void tg_copy(tetris_game *dest, const tetris_game *src){
     // copy board 
+    assert(src->rows == 22);
     memcpy(dest->board, src->board, sizeof(char) * src->rows * src->cols);
      for(int i = 0; i < src->rows; i++)
          for(int j = 0; j < src->cols; j++)

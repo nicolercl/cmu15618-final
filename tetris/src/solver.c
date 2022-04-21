@@ -3,19 +3,21 @@
 #include "sys/time.h"
 #include "omp.h"
 #include "helper.h"
+#include <assert.h>
 #define DEBUG 0
 
-tetris_block openmp_solve(tetris_game *tg, const parameters param, int depth, int nthreads){
+void openmp_solve(tetris_game *tg, const parameters param, int depth, int nthreads, tetris_block *result){
     FILE *f;
     if(DEBUG){
         f = fopen("tetris.log", "a");
+        fprintf(f, "SOLVE!\n");
     }
 
-    tetris_block global_best_pos;
-    global_best_pos.typ = INT_MAX;
+    int global_best_score = INT_MAX;
+    int global_ori, global_col;
     #pragma omp parallel 
     {
-        int chunk_size, num_of_chunk, total_combination = 1;
+        int chunk_size, total_combination = 1;
         int *combinations = (int*)malloc(sizeof(int) * depth);
         combinations[0] = (tg->cols * tetris_orientation_number[tg->falling.typ]);
         for(int i = 1; i < depth; i++){
@@ -24,81 +26,89 @@ tetris_block openmp_solve(tetris_game *tg, const parameters param, int depth, in
         }
         for(int i = 0; i < depth; i++)
             total_combination *= combinations[i];
+
         chunk_size = (total_combination + nthreads - 1) / nthreads;
-        num_of_chunk = (total_combination + chunk_size - 1) / chunk_size;
         //printf("nthreads %d size %d \n", nthreads, chunk_size * num_of_chunk);
         
         tetris_game *solver_tg;
         int chunk_i = omp_get_thread_num();
-        int *ori = (int*)malloc(sizeof(int) * depth);
+        int local_best_score = INT_MAX;
+        int local_best_ori;
+        int local_best_tcol;
         int *tcol = (int*)malloc(sizeof(int) * depth);
+        int *ori = (int*)malloc(sizeof(int) * depth);
         solver_tg = tg_create(tg->rows, tg->cols);
         int tetris_id, lines_cleared;
-        while(chunk_i < num_of_chunk){
-            int tidx      = omp_get_thread_num();
-            struct timeval time; 
-            gettimeofday(&time,NULL);
-            suseconds_t start_time = time.tv_sec * 1000000 + time.tv_usec;
-            tetris_block local_best_pos;
-            local_best_pos.typ = INT_MAX;
-            int start = chunk_i * chunk_size;
-            int end   = start + chunk_size;
-            for(int idx = start; idx < end; idx++) {
-                int id = idx;
-                int div = 1;
-                tg_copy(solver_tg, tg);
-                // bcd
-                for(int j = 1; j < depth; j++)
-                   div *= combinations[j];
-                for(int j = 0; j < depth; j++){
-                    tetris_id = id / div;
-                    id = id % div;
-                    if(j + 1 < depth) div /= combinations[j+1];
-                    ori[j] = tetris_id / solver_tg->cols;
-                    tcol[j] = tetris_id % solver_tg->cols ; 
-                }
-                int o, c;
-                for(int j = 0; j < depth; j++){
-                    tg_move(solver_tg, -solver_tg->falling.loc.col);
-                    tg_rotate(solver_tg, -solver_tg->falling.ori);
+        int start = chunk_i * chunk_size;
+        int end   = MIN(start + chunk_size, total_combination - 1);
+        for(int idx = start; idx < end; idx++) {
+            int id = idx;
+            int div = 1;
+            tg_copy(solver_tg, tg);
+            solver_tg->line_cleared = 0;
+            // bcd
+            for(int j = 1; j < depth; j++)
+               div *= combinations[j];
 
-                    // then we rotate the piece
-                    tg_rotate(solver_tg, ori[j]);
-
-                    // move the piece to position
-                    tg_move(solver_tg, tcol[j]);
-
-                    // record the current pos and ori
-                    if(j == 0){
-                        o = solver_tg->falling.ori;
-                        c = solver_tg->falling.loc.col;
-                    }
-
-                    tg_down(solver_tg);
-                    lines_cleared = tg_check_lines(solver_tg);
-                    tg_adjust_score(solver_tg, lines_cleared);
-                }
-
-                if(DEBUG) tg_print(solver_tg, f);
-
-                int score = tg_get_score(solver_tg, param);
-                if(score < local_best_pos.typ){
-                    local_best_pos.typ = score;
-                    local_best_pos.loc.col = c;
-                    local_best_pos.ori = o;
-                }
+            for(int j = 0; j < depth; j++){
+                tetris_id = id / div;
+                id = id % div;
+                if(j + 1 < depth) div /= combinations[j+1];
+                ori[j] = tetris_id / solver_tg->cols;
+                tcol[j] = tetris_id % solver_tg->cols - 1; 
+                // assert
+                if(j == depth - 1) assert(div == 1);
             }
 
-            #pragma omp critical
-            if(local_best_pos.typ < global_best_pos.typ){
-                global_best_pos.typ = local_best_pos.typ;
-                global_best_pos.loc.col = local_best_pos.loc.col;
-                global_best_pos.ori = local_best_pos.ori;
+            for(int j = 0; j < depth; j++){
+                tg_move(solver_tg, -solver_tg->falling.loc.col);
+                tg_rotate(solver_tg, -solver_tg->falling.ori);
+
+                // then we rotate the piece
+                tg_rotate(solver_tg, ori[j]);
+
+                // move the piece to position
+                tg_move(solver_tg, tcol[j]);
+
+                tg_down(solver_tg);
+                lines_cleared = tg_check_lines(solver_tg);
+                tg_adjust_score(solver_tg, lines_cleared);
             }
 
-            gettimeofday(&time,NULL);
-            suseconds_t end_time = time.tv_sec * 1000000 + time.tv_usec;
-            chunk_i += nthreads;
+            tg_remove(solver_tg, solver_tg->falling);
+            int score = tg_get_score(solver_tg, param);
+            tg_put(solver_tg, solver_tg->falling);
+
+            if(DEBUG && solver_tg->line_cleared >= 4) {
+                tg_remove(solver_tg, solver_tg->falling);
+                fprintf(f, "Line Score: %d\n", tg_get_score(solver_tg, param));
+                fprintf(f, "Height: %d\n", tg_get_height(solver_tg));
+                tg_print(solver_tg, f);
+                tg_put(solver_tg, solver_tg->falling);
+            }
+
+            if(score < local_best_score){
+                local_best_score = score;
+                local_best_ori = ori[0];
+                local_best_tcol = tcol[0];
+                if(DEBUG) {
+                    tg_remove(solver_tg, solver_tg->falling);
+                    fprintf(f, "Best Score: %d\n", local_best_score);
+                    fprintf(f, "Height: %d\n", tg_get_height(solver_tg));
+                    tg_print(solver_tg, f);
+                    tg_put(solver_tg, solver_tg->falling);
+                }
+            }
+        }
+
+        #pragma omp critical
+        {
+            if(local_best_score < global_best_score){
+                global_best_score = local_best_score;
+                global_ori = local_best_ori;
+                global_col = local_best_tcol;
+            }
+
         }
         free(ori);
         free(tcol);
@@ -106,10 +116,13 @@ tetris_block openmp_solve(tetris_game *tg, const parameters param, int depth, in
         free(combinations);
     }
 
-    return global_best_pos;
+    result->ori = global_ori;
+    result->loc.col = global_col;
+
+    if(DEBUG) fclose(f);
 }
 
-tetris_block solver(tetris_game *tg, parameters param, int depth, int nthreads){
+void solver(tetris_game *tg, parameters param, int depth, int nthreads, tetris_block* result){
 
     struct timeval time; 
     gettimeofday(&time,NULL);
@@ -118,8 +131,7 @@ tetris_block solver(tetris_game *tg, parameters param, int depth, int nthreads){
     // before we solve, turn off rand()
     tg->use_random = 0;
     tg_copy(solver_tg, tg);
-    tetris_block result;
-    result = openmp_solve(solver_tg, param, depth, nthreads);
+    openmp_solve(solver_tg, param, depth, nthreads, result);
     tg_delete(solver_tg);
     tg->use_random = 1;
     gettimeofday(&time,NULL);

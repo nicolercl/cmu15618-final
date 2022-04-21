@@ -5,5 +5,5 @@
 #include <limits.h>
 #include "parameters.h"
 #include "tetris.h"
-tetris_block solver(tetris_game *tg, parameters param, int depth, int nthreads);
+void solver(tetris_game *tg, parameters param, int depth, int nthreads, tetris_block *result);
 #endif
