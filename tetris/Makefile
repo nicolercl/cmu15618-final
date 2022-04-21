@@ -12,12 +12,12 @@
 # See the LICENSE.txt file for details.
 #
 #-------------------------------------------------------------------------------
-# -fopenmp=libomp
+# -fopenmp=libomp -fcilkplus
 # Compiler Variable Declarations
-CC=clang
+CC=clang++ #clang
 FLAGS=-O3 -Wall -pedantic -fcilkplus
 INC=-Isrc/
-CFLAGS=$(FLAGS) -c -g --std=c99 $(INC)
+CFLAGS=$(FLAGS) -c -g $(INC) # --std=c99
 LFLAGS=$(FLAGS) -lncurses
 DIR_GUARD=@mkdir -p $(@D)
 
@@ -52,9 +52,9 @@ endif
 endif
 
 # Sources and Objects
-SOURCES=$(shell find src/ -type f -name "*.c")
-OBJECTS=$(patsubst src/%.c,obj/$(CFG)/%.o,$(SOURCES))
-DEPS=$(patsubst src/%.c,deps/%.d,$(SOURCES))
+SOURCES=$(shell find src/ -type f -name "*.cpp")
+OBJECTS=$(patsubst src/%.cpp,obj/$(CFG)/%.o,$(SOURCES))
+DEPS=$(patsubst src/%.cpp,deps/%.d,$(SOURCES))
 
 # Main targets
 .PHONY: all clean clean_all
@@ -71,7 +71,7 @@ clean_all:
 	rm -rf bin/* obj/* deps/*
 
 # --- Compile Rule
-obj/$(CFG)/%.o: src/%.c
+obj/$(CFG)/%.o: src/%.cpp
 	$(DIR_GUARD)
 	$(CC) $(CFLAGS) $< -o $@
 
@@ -81,7 +81,7 @@ bin/$(CFG)/main: $(OBJECTS)
 	$(CC) $(OBJECTS) $(LFLAGS) -o bin/$(CFG)/main
 
 # --- Dependency Rule
-deps/%.d: src/%.c
+deps/%.d: src/%.cpp
 	$(DIR_GUARD)
 	$(CC) $(CFLAGS) -MM $< | sed -e 's/~\(.*\)\.o:/\1.d \1.o:/' > $@
 

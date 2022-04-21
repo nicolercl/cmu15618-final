@@ -28,7 +28,7 @@
                                Array Definitions
 
 *******************************************************************************/
-const int tetris_orientation_number[NUM_TETROMINOS] = {4, 4, 4, 4, 4, 4, 4};
+// const int tetris_orientation_number[NUM_TETROMINOS] = {4, 4, 4, 4, 4, 4, 4};
 
 const tetris_location TETROMINOS[NUM_TETROMINOS][NUM_ORIENTATIONS][TETRIS] = {
   // I
@@ -430,7 +430,7 @@ void tg_init(tetris_game *obj, int rows, int cols)
   // Initialization logic
   obj->rows = rows;
   obj->cols = cols;
-  obj->board = malloc(rows * cols);
+  obj->board = (char *)malloc(rows * cols);
   memset(obj->board, TC_EMPTY, rows * cols);
   obj->points = 0;
   obj->level = 0;
@@ -454,7 +454,7 @@ void tg_init(tetris_game *obj, int rows, int cols)
 
 tetris_game *tg_create(int rows, int cols)
 {
-  tetris_game *obj = malloc(sizeof(tetris_game));
+  tetris_game *obj = (tetris_game *)malloc(sizeof(tetris_game));
   tg_init(obj, rows, cols);
   return obj;
 }
@@ -475,9 +475,9 @@ void tg_delete(tetris_game *obj) {
  */
 tetris_game *tg_load(FILE *f)
 {
-  tetris_game *obj = malloc(sizeof(tetris_game));
+  tetris_game *obj = (tetris_game *)malloc(sizeof(tetris_game));
   fread(obj, sizeof(tetris_game), 1, f);
-  obj->board = malloc(obj->rows * obj->cols);
+  obj->board = (char *)malloc(obj->rows * obj->cols);
   fread(obj->board, sizeof(char), obj->rows * obj->cols, f);
   return obj;
 }

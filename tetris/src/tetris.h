@@ -136,7 +136,9 @@ typedef struct {
   int line_cleared;
 } tetris_game;
 
-const int tetris_orientation_number[NUM_TETROMINOS];
+// const int tetris_orientation_number[NUM_TETROMINOS];
+const int tetris_orientation_number[NUM_TETROMINOS] = {4, 4, 4, 4, 4, 4, 4};
+
 /*
   This array stores all necessary information about the cells that are filled by
   each tetromino.  The first index is the type of the tetromino (i.e. shape,

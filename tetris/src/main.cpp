@@ -82,7 +82,7 @@ void get_moves(tetris_block falling, tetris_block result, int* moves){
     }
     moves[ptr++] = TM_DROP;
     moves[ptr] = TM_NONE;
-    return ptr;
+    // return ptr;
 }
 
 /*
@@ -250,7 +250,8 @@ int run_game(parameters param)
   }
 
   // solver init
-  tetris_block* result = malloc(sizeof(tetris_block) * DEPTH);
+  // tetris_block* result = malloc(sizeof(tetris_block) * DEPTH);
+  tetris_block result;
   int moves[MAXIMUM_MOVES];
   int action_ptr = 0;
   moves[0] = TM_NONE;
@@ -283,9 +284,9 @@ int run_game(parameters param)
             suseconds_t start = time.tv_sec * 1000000 + time.tv_usec;
 
             if (DFS) {
-                dfs_solver(tg, param, result);
+                // dfs_solver(tg, param, result);
             } else if (SOL){
-                solver(tg, param, DEPTH, NUM_OF_THREADS, result);
+                // solver(tg, param, DEPTH, NUM_OF_THREADS, result);
             } else if (CILK) {
                 result = dfs_cilk(tg, param);
             }
@@ -295,11 +296,11 @@ int run_game(parameters param)
             //printf("Total: %f\n", (float)(end - start) / 1000000.0);
             //fflush(stdout);
 
-            get_moves(tg->falling, *result, moves);
+            get_moves(tg->falling, result, moves);
             action_ptr = 0;
         }
 
-        move = moves[action_ptr++];
+        move = (tetris_move)moves[action_ptr++];
 
     } else {
         switch (getch()) {
@@ -382,76 +383,76 @@ int compare (const void * num1, const void * num2) {
         return 1;
 }
 
-const parameters generate_child(parameters *parent1, parameters *parent2){
-    parameters child;
-    unsigned int l = sizeof(child.weights);
-    for (unsigned int i = 0; i < l; i++){
-        if(rand() % 2 == 0)
-            child.weights[i] = parent1->weights[i];
-        else
-            child.weights[i] = parent2->weights[i];
+// const parameters generate_child(parameters *parent1, parameters *parent2){
+//     parameters child;
+//     unsigned int l = sizeof(child.weights);
+//     for (unsigned int i = 0; i < l; i++){
+//         if(rand() % 2 == 0)
+//             child.weights[i] = parent1->weights[i];
+//         else
+//             child.weights[i] = parent2->weights[i];
 
-        // mutation
-        if(rand() % 5 == 0){
-            if(rand () % 2 == 0)
-                child.weights[i] += (float)(rand() % 100) / 100; 
-            else
-                child.weights[i] -= (float)(rand() % 100) / 100; 
+//         // mutation
+//         if(rand() % 5 == 0){
+//             if(rand () % 2 == 0)
+//                 child.weights[i] += (float)(rand() % 100) / 100; 
+//             else
+//                 child.weights[i] -= (float)(rand() % 100) / 100; 
 
-        }
-    }
+//         }
+//     }
 
-    return child;
-}
-int genetic_algorithm(){
-    candidate pool[12]; 
-    FILE *f;
-    f = fopen("gen.log", "w");
-    // init
-    for(int i = 0; i < 12; i++){
-        random_params(&(pool[i].param));
-    }
-    int count = 0; 
-    while(1){
-        for(int i = 0; i < 12; i++)
-            pool[i].score = 0;
+//     return child;
+// }
+// int genetic_algorithm(){
+//     candidate pool[12]; 
+//     FILE *f;
+//     f = fopen("gen.log", "w");
+//     // init
+//     for(int i = 0; i < 12; i++){
+//         random_params(&(pool[i].param));
+//     }
+//     int count = 0; 
+//     while(1){
+//         for(int i = 0; i < 12; i++)
+//             pool[i].score = 0;
         
-        for(int j = 0; j < REPEAT; j++){
-            for(int i = 0; i < 12; i++){
-                pool[i].score += run_game(pool[i].param);
-            }
-        }
+//         for(int j = 0; j < REPEAT; j++){
+//             for(int i = 0; i < 12; i++){
+//                 pool[i].score += run_game(pool[i].param);
+//             }
+//         }
 
-        qsort(pool, 12, sizeof(candidate), compare);
-        printf("%d %d\n", pool[0].score, pool[1].score);
-        parameters *best = &(pool->param);
-        fprintf(f, "Generation %d Best Score %d height %f hole %f bumpiness %f clear_line %f\n", count, pool->score / REPEAT, best->weights[0], best->weights[1], best->weights[2], best->weights[3]);
-        printf("Generation %d Best Score %d height %f hole %f bumpiness %f clear_line %f\n", count, pool->score / REPEAT, best->weights[0], best->weights[1], best->weights[2], best->weights[3]);
-        fflush(f);
-        // generate children
-        for(int i = 0; i < 5; i++){
-            int j = i;
-            while(j == i){
-                j = rand() % 5;
-            }
-            const parameters *p1 = &(pool[i].param), *p2 = &(pool[j].param);
-            pool[i + 5].param = generate_child(p1, p2);
-        }
+//         qsort(pool, 12, sizeof(candidate), compare);
+//         printf("%d %d\n", pool[0].score, pool[1].score);
+//         parameters *best = &(pool->param);
+//         fprintf(f, "Generation %d Best Score %d height %f hole %f bumpiness %f clear_line %f\n", count, pool->score / REPEAT, best->weights[0], best->weights[1], best->weights[2], best->weights[3]);
+//         printf("Generation %d Best Score %d height %f hole %f bumpiness %f clear_line %f\n", count, pool->score / REPEAT, best->weights[0], best->weights[1], best->weights[2], best->weights[3]);
+//         fflush(f);
+//         // generate children
+//         for(int i = 0; i < 5; i++){
+//             int j = i;
+//             while(j == i){
+//                 j = rand() % 5;
+//             }
+//             const parameters *p1 = &(pool[i].param), *p2 = &(pool[j].param);
+//             pool[i + 5].param = generate_child(p1, p2);
+//         }
 
-        for(int i = 5 + 5; i < 12; i++){
-            random_params(&(pool[i].param));
-        }
+//         for(int i = 5 + 5; i < 12; i++){
+//             random_params(&(pool[i].param));
+//         }
 
-        count ++;
-    }
-    fclose(f);
-}
+//         count ++;
+//     }
+//     fclose(f);
+// }
 
 int main(int argc, char **argv) {
   struct timeval time; 
   gettimeofday(&time,NULL);
   //srand((time.tv_sec * 1000) + (time.tv_usec / 1000));
-  omp_set_num_threads(NUM_OF_THREADS);
+  // omp_set_num_threads(NUM_OF_THREADS);
   int p[4] = {1.0, 10.0, 0.0, 100.0};
   parameters solver_params;
   for(int i = 0; i < 4; i++)
