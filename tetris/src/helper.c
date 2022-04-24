@@ -69,14 +69,15 @@ int tg_get_bumpiness(tetris_game *obj){
 }
 
 int tg_get_height(tetris_game *obj){
+    return obj->height;
+    /*
     int row;
     for(row = 0; row < obj->rows; row++){
         if(!tg_line_empty(obj, row))
             break;
     }
-//    assert(obj->rows == 22);
-    // assert(row >= 0 && row < obj->rows);
     return obj->rows - 1 - row;
+    */
 }
 
 int tg_get_score(tetris_game *obj, const parameters param){
@@ -111,5 +112,6 @@ void tg_copy(tetris_game *dest, const tetris_game *src){
     dest->falling = src->falling;
     dest->stored  = src->stored;
     dest->use_random = src->use_random;
+    dest->height = src->height;
 }
 

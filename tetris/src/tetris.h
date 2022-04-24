@@ -134,6 +134,7 @@ typedef struct {
   int lines_remaining;
   int use_random;
   int line_cleared;
+  int height;
 } tetris_game;
 
 const int tetris_orientation_number[NUM_TETROMINOS];

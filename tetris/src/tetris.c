@@ -95,6 +95,8 @@ char tg_get(tetris_game *obj, int row, int column)
 static void tg_set(tetris_game *obj, int row, int column, char value)
 {
   obj->board[obj->cols * row + column] = value;
+  if(value != TC_EMPTY)
+      obj->height = MAX(obj->height, obj->rows - row - 1);
 }
 
 /*
@@ -360,6 +362,7 @@ int tg_check_lines(tetris_game *obj)
 
   tg_put(obj, obj->falling); // replace
   obj->line_cleared += nlines;
+  obj->height -= nlines;
   return nlines;
 }
 
@@ -437,6 +440,7 @@ void tg_init(tetris_game *obj, int rows, int cols)
   obj->level = 0;
   obj->ticks_till_gravity = GRAVITY_LEVEL[obj->level];
   obj->use_random = 1;
+  obj->height = 0;
   /*
   struct timeval time; 
   gettimeofday(&time,NULL);
