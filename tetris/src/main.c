@@ -41,7 +41,7 @@
 #define MAXIMUM_MOVES 128
 #define USE_SOLVER 1
 #define GUI 1
-#define DFS 0
+#define DFS 1
 #define BFS 0
 #define SOL 1
 #define DEPTH 3
@@ -288,8 +288,8 @@ int run_game(parameters param)
 
             gettimeofday(&time,NULL);
             suseconds_t end = time.tv_sec * 1000000 + time.tv_usec;
-            //printf("Total: %f\n", (float)(end - start) / 1000000.0);
-            //fflush(stdout);
+            printf("Total: %f\n", (float)(end - start) / 1000000.0);
+            fflush(stdout);
 
             get_moves(tg->falling, *result, moves);
             action_ptr = 0;
@@ -448,7 +448,7 @@ int main(int argc, char **argv) {
   gettimeofday(&time,NULL);
   //srand((time.tv_sec * 1000) + (time.tv_usec / 1000));
   omp_set_num_threads(NUM_OF_THREADS);
-  int p[4] = {1.0, 10.0, 0.0, 100.0};
+  int p[4] = {1.0, 10.0, 0.0, 10000.0};
   parameters solver_params;
   for(int i = 0; i < 4; i++)
     solver_params.weights[i] = p[i];

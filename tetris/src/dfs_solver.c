@@ -28,7 +28,7 @@ tetris_block dfs_solve(const tetris_game *tg, const parameters param, int depth)
     best_pos.typ = INT_MAX;
     tetris_game *solver_tg = tg_create(tg->rows, tg->cols);
     for(int o = 0; o < NUM_ORIENTATIONS; o++){
-        for(int c = 0; c < tg->cols; c++){
+        for(int c = -1; c < tg->cols; c++){
             tg_copy(solver_tg, tg);
 
             // first we move the piece to the leftmost

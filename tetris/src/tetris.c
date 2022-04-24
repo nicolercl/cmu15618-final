@@ -28,7 +28,7 @@
                                Array Definitions
 
 *******************************************************************************/
-const int tetris_orientation_number[NUM_TETROMINOS] = {4, 4, 4, 4, 4, 4, 4};
+const int tetris_orientation_number[NUM_TETROMINOS] = {2, 4, 4, 1, 2, 4, 2};
 
 const tetris_location TETROMINOS[NUM_TETROMINOS][NUM_ORIENTATIONS][TETRIS] = {
   // I
@@ -207,10 +207,11 @@ static void tg_do_gravity_tick(tetris_game *obj)
  */
 void tg_move(tetris_game *obj, int direction)
 {
+  int sign = (direction > 0) ? 1 : -1;
   tg_remove(obj, obj->falling);
   obj->falling.loc.col += direction;
-  if (!tg_fits(obj, obj->falling)) {
-    obj->falling.loc.col -= direction;
+  while(!tg_fits(obj, obj->falling)) {
+    obj->falling.loc.col -= sign ;
   }
   tg_put(obj, obj->falling);
 }

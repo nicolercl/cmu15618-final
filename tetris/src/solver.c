@@ -5,6 +5,7 @@
 #include "helper.h"
 #include <assert.h>
 #define DEBUG 0
+#define DEBUG2 0
 
 void openmp_solve(tetris_game *tg, const parameters param, int depth, int nthreads, tetris_block *result){
     FILE *f;
@@ -15,19 +16,19 @@ void openmp_solve(tetris_game *tg, const parameters param, int depth, int nthrea
 
     int global_best_score = INT_MAX;
     int global_ori, global_col;
+    int chunk_size, total_combination = 1;
+    int *combinations = (int*)malloc(sizeof(int) * depth);
+    combinations[0] = (tg->cols * tetris_orientation_number[tg->falling.typ]);
+    for(int i = 1; i < depth; i++){
+        combinations[i] = \
+        (tg->cols * tetris_orientation_number[tg->next[i-1].typ]);
+    }
+    for(int i = 0; i < depth; i++)
+        total_combination *= combinations[i];
+
+    chunk_size = (total_combination + nthreads - 1) / nthreads;
     #pragma omp parallel 
     {
-        int chunk_size, total_combination = 1;
-        int *combinations = (int*)malloc(sizeof(int) * depth);
-        combinations[0] = (tg->cols * tetris_orientation_number[tg->falling.typ]);
-        for(int i = 1; i < depth; i++){
-            combinations[i] = \
-            (tg->cols * tetris_orientation_number[tg->next[i-1].typ]);
-        }
-        for(int i = 0; i < depth; i++)
-            total_combination *= combinations[i];
-
-        chunk_size = (total_combination + nthreads - 1) / nthreads;
         //printf("nthreads %d size %d \n", nthreads, chunk_size * num_of_chunk);
         
         tetris_game *solver_tg;
@@ -35,12 +36,11 @@ void openmp_solve(tetris_game *tg, const parameters param, int depth, int nthrea
         int local_best_score = INT_MAX;
         int local_best_ori;
         int local_best_tcol;
-        int *tcol = (int*)malloc(sizeof(int) * depth);
-        int *ori = (int*)malloc(sizeof(int) * depth);
+        int tcol[4], ori[4];
         solver_tg = tg_create(tg->rows, tg->cols);
         int tetris_id, lines_cleared;
         int start = chunk_i * chunk_size;
-        int end   = MIN(start + chunk_size, total_combination - 1);
+        int end   = MIN(start + chunk_size, total_combination);
         for(int idx = start; idx < end; idx++) {
             int id = idx;
             int div = 1;
@@ -79,14 +79,6 @@ void openmp_solve(tetris_game *tg, const parameters param, int depth, int nthrea
             int score = tg_get_score(solver_tg, param);
             tg_put(solver_tg, solver_tg->falling);
 
-            if(DEBUG && solver_tg->line_cleared >= 4) {
-                tg_remove(solver_tg, solver_tg->falling);
-                fprintf(f, "Line Score: %d\n", tg_get_score(solver_tg, param));
-                fprintf(f, "Height: %d\n", tg_get_height(solver_tg));
-                tg_print(solver_tg, f);
-                tg_put(solver_tg, solver_tg->falling);
-            }
-
             if(score < local_best_score){
                 local_best_score = score;
                 local_best_ori = ori[0];
@@ -100,6 +92,7 @@ void openmp_solve(tetris_game *tg, const parameters param, int depth, int nthrea
                 }
             }
         }
+        if (DEBUG2) printf("thread %d local best %d c %d o %d\n", chunk_i, local_best_score, local_best_tcol, local_best_ori);
 
         #pragma omp critical
         {
@@ -110,15 +103,14 @@ void openmp_solve(tetris_game *tg, const parameters param, int depth, int nthrea
             }
 
         }
-        free(ori);
-        free(tcol);
         tg_delete(solver_tg);
-        free(combinations);
     }
 
+    if(DEBUG2) printf("global best %d c %d o %d\n", global_best_score, global_col, global_ori);
     result->ori = global_ori;
     result->loc.col = global_col;
 
+    free(combinations);
     if(DEBUG) fclose(f);
 }
 
@@ -136,7 +128,5 @@ void solver(tetris_game *tg, parameters param, int depth, int nthreads, tetris_b
     tg->use_random = 1;
     gettimeofday(&time,NULL);
     suseconds_t end = time.tv_sec * 1000000 + time.tv_usec;
-//    printf("Total: %f\n", (float)(end - start) / 1000000.0);
- //   fflush(stdout);
     return result;
 }
