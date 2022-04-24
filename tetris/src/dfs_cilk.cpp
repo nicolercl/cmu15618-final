@@ -2,7 +2,7 @@
 #include "parameters.h"
 #include "sys/time.h"
 
-#define DEPTH 2
+#define DEPTH 3
 #define DEBUG 0
 
 struct min_comp
@@ -34,7 +34,7 @@ tetris_block dfs_solve(tetris_game *tg, const parameters param, int depth){
     cilk::reducer_min<tetris_block, min_comp> reducer_best_pos;
 
     cilk_for (int o = 0; o < NUM_ORIENTATIONS; o++){
-        cilk_for (int c = 0; c < tg->cols; c++){
+        cilk_for (int c = -1; c < tg->cols; c++){
             tetris_game *solver_tg = tg_create(tg->rows, tg->cols);
             tg_copy(solver_tg, tg);
 
