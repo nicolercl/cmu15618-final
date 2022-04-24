@@ -28,7 +28,7 @@
                                Array Definitions
 
 *******************************************************************************/
-const int tetris_orientation_number[NUM_TETROMINOS] = {2, 4, 4, 1, 2, 4, 2};
+const int tetris_orientation_number[NUM_TETROMINOS] = {4, 4, 4, 4, 4, 4, 4};
 
 const tetris_location TETROMINOS[NUM_TETROMINOS][NUM_ORIENTATIONS][TETRIS] = {
   // I
@@ -369,7 +369,7 @@ int tg_check_lines(tetris_game *obj)
 void tg_adjust_score(tetris_game *obj, int lines_cleared)
 {
   int line_multiplier[] = {0, 40, 100, 300, 1200};
-  obj->points += line_multiplier[lines_cleared] * (obj->level + 1);
+  obj->points += lines_cleared;
   if (lines_cleared >= obj->lines_remaining) {
     obj->level = MIN(MAX_LEVEL, obj->level + 1);
     lines_cleared -= obj->lines_remaining;

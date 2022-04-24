@@ -41,7 +41,7 @@
 #define MAXIMUM_MOVES 128
 #define USE_SOLVER 1
 #define GUI 1
-#define DFS 1
+#define DFS 0
 #define BFS 0
 #define SOL 1
 #define DEPTH 3
@@ -253,6 +253,7 @@ int run_game(parameters param)
   int action_ptr = 0;
   moves[0] = TM_NONE;
 
+  float total_t = 0, count = 0;
   time_t start;
   start = time(NULL);
   // Game loop
@@ -269,7 +270,6 @@ int run_game(parameters param)
     }
 
     sleep_milli(DELAY);
-
 
     if(USE_SOLVER){
 
@@ -288,7 +288,9 @@ int run_game(parameters param)
 
             gettimeofday(&time,NULL);
             suseconds_t end = time.tv_sec * 1000000 + time.tv_usec;
-            printf("Total: %f\n", (float)(end - start) / 1000000.0);
+            count ++;
+            total_t += (float)(end - start);
+            printf("Total: %f\n", total_t / count / 1000000.0);
             fflush(stdout);
 
             get_moves(tg->falling, *result, moves);
