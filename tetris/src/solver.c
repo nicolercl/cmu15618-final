@@ -33,11 +33,13 @@ void openmp_solve(tetris_game *tg, const parameters param, int depth, int nthrea
     #pragma omp parallel 
     {
         //printf("nthreads %d size %d \n", nthreads, chunk_size * num_of_chunk);
-        
+        int cached = 0;
+        int *cached_tid = (int*)malloc(sizeof(int) * (depth - 1));
+        tetris_game *cached_tg = tg_create(tg->rows, tg->cols, 0);
     	struct timeval time; 
     	float solve_t = 0, copy_t = 0, drop_t = 0, crit_t = 0;
-	suseconds_t start_t, end_t;
-	suseconds_t total_start, total_end;
+    	suseconds_t start_t, end_t;
+    	suseconds_t total_start, total_end;
         gettimeofday(&time,NULL);
         total_start = time.tv_sec * 1000000 + time.tv_usec;
         tetris_game *solver_tg;
@@ -80,9 +82,21 @@ void openmp_solve(tetris_game *tg, const parameters param, int depth, int nthrea
                 if(j == depth - 1) assert(div == 1);
             }
 
+            for(int j = 0; j < depth - 1; j++){
+                int ctid = ori[j] * solver_tg->cols + tcol[j] + 1;
+                if(ctid != cached_tid[j]){
+                    cached = 0;
+                    break;
+                }
+            }
+
             gettimeofday(&time,NULL);
             start_t = time.tv_sec * 1000000 + time.tv_usec;
             for(int j = 0; j < depth; j++){
+                if(cached && j != depth - 1)
+                    continue;
+                if(cached && j == depth - 1) 
+                    tg_copy(solver_tg, cached_tg);
                 tg_move(solver_tg, -solver_tg->falling.loc.col);
                 tg_rotate(solver_tg, -solver_tg->falling.ori);
 
@@ -95,7 +109,17 @@ void openmp_solve(tetris_game *tg, const parameters param, int depth, int nthrea
                 tg_down(solver_tg);
                 lines_cleared = tg_check_lines(solver_tg);
                 tg_adjust_score(solver_tg, lines_cleared);
+                if(!cached && j == depth - 2){
+                    tg_copy(cached_tg, solver_tg);
+                    for(int k = 0; k < depth - 1; k++){
+                        int ctid = ori[k] * solver_tg->cols + tcol[k] + 1;
+                        cached_tid[k] = ctid;
+                    }
+                    cached = 1;
+                }
             }
+
+
             gettimeofday(&time,NULL);
             end_t = time.tv_sec * 1000000 + time.tv_usec;
 	    drop_t += (float)(end_t - start_t);
@@ -158,6 +182,8 @@ void openmp_solve(tetris_game *tg, const parameters param, int depth, int nthrea
 				get_min_max(crit_t, &max_crit_t, 1);
 			}
 		}
+        free(cached_tid);
+        tg_delete(cached_tg);
     }
 
     if(DEBUG2) printf("global best %d c %d o %d\n", global_best_score, global_col, global_ori);
