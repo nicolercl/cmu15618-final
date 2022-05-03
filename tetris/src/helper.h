@@ -14,4 +14,5 @@ int tg_get_bumpiness(tetris_game *obj);
 int tg_get_height(tetris_game *obj);
 int tg_get_score(tetris_game *obj, const parameters param);
 void tg_copy(tetris_game *dest, const tetris_game *src);
+void get_min_max(float value, float *mvalue, int max);
 #endif

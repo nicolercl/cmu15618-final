@@ -1,4 +1,5 @@
 #include "helper.h"
+#include "tetris.h"
 #include <assert.h>
 bool tg_line_empty(tetris_game *obj, int i){
     for(int j = 0; j < obj->cols; j++){
@@ -115,3 +116,9 @@ void tg_copy(tetris_game *dest, const tetris_game *src){
     dest->height = src->height;
 }
 
+void get_min_max(float value, float *mvalue, int max){
+    if(max)
+        *mvalue = MAX(*mvalue, value);  
+    else
+	*mvalue = MIN(*mvalue, value);
+}

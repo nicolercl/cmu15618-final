@@ -4,7 +4,7 @@
 #include "omp.h"
 #include "helper.h"
 
-#define DEPTH 4
+#define DEPTH 2
 // return the best position for tg->falling
 // we use block->typ to store the height
 // and row to store the points

@@ -40,16 +40,17 @@
 #define COLS_PER_CELL 2
 #define MAXIMUM_MOVES 128
 #define USE_SOLVER 1
-#define GUI 1
+#define GUI 0
 #define DFS 0
 #define BFS 0
 #define SOL 1
-#define DEPTH 3
+#define DEPTH 2
 #define TIME_LIMIT 1000 // 60 seconds
-#define DELAY 30
-#define NUM_OF_THREADS 8
+#define DELAY 0
+#define NUM_OF_THREADS 128
 #define ROW 22
 #define COL 10
+#define SCORE 0
 
 // genetic algorithm params
 #define REPEAT 10
@@ -290,8 +291,11 @@ int run_game(parameters param)
             suseconds_t end = time.tv_sec * 1000000 + time.tv_usec;
             count ++;
             total_t += (float)(end - start);
-            printf("Total: %f\n", total_t / count / 1000000.0);
-            fflush(stdout);
+	    	if(SCORE){
+		   		printf("Total: %f\n", total_t / count / 1000000.0);
+		    	printf("line: %d\n", tg->points);
+		    	fflush(stdout);
+	    	}
 
             get_moves(tg->falling, *result, moves);
             action_ptr = 0;
@@ -454,6 +458,7 @@ int main(int argc, char **argv) {
   parameters solver_params;
   for(int i = 0; i < 4; i++)
     solver_params.weights[i] = p[i];
+  float total_t = 0, count = 0;
   run_game(solver_params);
 //  genetic_algorithm();
 }
