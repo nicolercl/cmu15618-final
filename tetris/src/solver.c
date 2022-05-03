@@ -49,9 +49,7 @@ void openmp_solve(tetris_game *tg, const parameters param, int depth, int nthrea
 		gettimeofday(&time,NULL);
 		start_t = time.tv_sec * 1000000 + time.tv_usec;
 		// solve bottleneck for DEPTH 2
-  		solver_tg = (tetris_game*)malloc(sizeof(tetris_game));
-  		tg_init(solver_tg, tg->rows, tg->cols);
-       // solver_tg = tg_create(tg->rows, tg->cols);
+        solver_tg = tg_create(tg->rows, tg->cols, 0);
 		gettimeofday(&time,NULL);
 		end_t = time.tv_sec * 1000000 + time.tv_usec;
 		crit_t += (float)(end_t - start_t);
@@ -186,7 +184,7 @@ void openmp_solve(tetris_game *tg, const parameters param, int depth, int nthrea
 
 void solver(tetris_game *tg, parameters param, int depth, int nthreads, tetris_block* result){
 
-    tetris_game *solver_tg = tg_create(tg->rows, tg->cols);
+    tetris_game *solver_tg = tg_create(tg->rows, tg->cols, 0);
     // before we solve, turn off rand()
     tg->use_random = 0;
     tg_copy(solver_tg, tg);

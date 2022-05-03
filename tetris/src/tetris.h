@@ -154,8 +154,8 @@ extern const tetris_location TETROMINOS[NUM_TETROMINOS][NUM_ORIENTATIONS][TETRIS
 extern const int GRAVITY_LEVEL[MAX_LEVEL+1];
 
 // Data structure manipulation.
-void tg_init(tetris_game *obj, int rows, int cols);
-tetris_game *tg_create(int rows, int cols);
+void tg_init(tetris_game *obj, int rows, int cols, int use_random);
+tetris_game *tg_create(int rows, int cols, int use_random);
 void tg_destroy(tetris_game *obj);
 void tg_delete(tetris_game *obj);
 tetris_game *tg_load(FILE *f);

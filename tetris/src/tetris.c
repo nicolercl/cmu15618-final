@@ -429,7 +429,7 @@ bool tg_tick(tetris_game *obj, tetris_move move)
   return !tg_game_over(obj);
 }
 
-void tg_init(tetris_game *obj, int rows, int cols)
+void tg_init(tetris_game *obj, int rows, int cols, int use_random)
 {
   // Initialization logic
   obj->rows = rows;
@@ -439,7 +439,7 @@ void tg_init(tetris_game *obj, int rows, int cols)
   obj->points = 0;
   obj->level = 0;
   obj->ticks_till_gravity = GRAVITY_LEVEL[obj->level];
-  obj->use_random = 1;
+  obj->use_random = use_random;
   obj->height = 0;
   /*
   struct timeval time; 
@@ -457,10 +457,10 @@ void tg_init(tetris_game *obj, int rows, int cols)
     obj->next[i].loc.col = obj->cols/2 - 2;
 }
 
-tetris_game *tg_create(int rows, int cols)
+tetris_game *tg_create(int rows, int cols, int use_random)
 {
   tetris_game *obj = malloc(sizeof(tetris_game));
-  tg_init(obj, rows, cols);
+  tg_init(obj, rows, cols, use_random);
   return obj;
 }
 
