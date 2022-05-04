@@ -1,0 +1,3 @@
+\section{Conclusion}
+In this project, we present and analyzed several way to implement a tetris solver, including a approach (approach 2) that partitions the tetris search space evenly making it extremely easy to parallelize our solver. We then analyzed the performance bottleneck and reasons for imperfect speedup and proposed 3 optimizations. After applying our optimizations, we show that we removed nearly all workload imbalance and increased our speedup to near perfect speedup. To prove our result, we measured and analyzed the time spent on each critical functions using gettimeofday(). 
+As a result, we were able to build a tetris solver that can clear up to 1000 lines per second.
